@@ -503,15 +503,17 @@ export interface IMemoryManager {
 }
 
 export abstract class Service {
-    private static instance: Service | null = null;
+    private static instances: Map<any, Service> = new Map();
     static serviceType: ServiceType;
 
     public static getInstance<T extends Service>(): T {
-        if (!Service.instance) {
-            // Use this.prototype.constructor to instantiate the concrete class
-            Service.instance = new (this as any)();
+        if (!Service.instances.has(this)) {
+            Service.instances.set(
+                this,
+                new (this as unknown as { new (): T })()
+            );
         }
-        return Service.instance as T;
+        return Service.instances.get(this) as T;
     }
 }
 
