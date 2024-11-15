@@ -341,7 +341,7 @@ export class MessageManager {
         if (
             message.interaction ||
             message.author.id ===
-            this.client.user?.id /* || message.author?.bot*/
+                this.client.user?.id /* || message.author?.bot*/
         )
             return;
         const userId = message.author.id as UUID;
@@ -389,10 +389,10 @@ export class MessageManager {
                 url: message.url,
                 inReplyTo: message.reference?.messageId
                     ? stringToUuid(
-                        message.reference.messageId +
-                        "-" +
-                        this.runtime.agentId
-                    )
+                          message.reference.messageId +
+                              "-" +
+                              this.runtime.agentId
+                      )
                     : undefined,
             };
 
@@ -501,13 +501,11 @@ export class MessageManager {
                                 message.id + "-" + this.runtime.agentId
                             );
                         }
-                        if (message.channel.type === ChannelType.GuildVoice) {
+                        if (false) {
                             // For voice channels, use text-to-speech
-                            const audioStream = await (
-                                this.runtime.getService(
-                                    ServiceType.SPEECH_GENERATION
-                                )
-                            ).getInstance<ISpeechService>()
+                            const audioStream = await this.runtime
+                                .getService(ServiceType.SPEECH_GENERATION)
+                                .getInstance<ISpeechService>()
                                 .generate(this.runtime, content.text);
                             await this.voiceManager.playAudioStream(
                                 userId,
@@ -659,14 +657,15 @@ export class MessageManager {
 
         for (const url of urls) {
             if (
-                this.runtime.getService(ServiceType.VIDEO)
+                this.runtime
+                    .getService(ServiceType.VIDEO)
                     .getInstance<IVideoService>()
                     .isVideoUrl(url)
             ) {
-                const videoInfo = await (this.runtime
+                const videoInfo = await this.runtime
                     .getService(ServiceType.VIDEO)
                     .getInstance<IVideoService>()
-                    .processVideo(url));
+                    .processVideo(url);
                 attachments.push({
                     id: `youtube-${Date.now()}`,
                     url: url,
