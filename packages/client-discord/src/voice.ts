@@ -253,8 +253,15 @@ export class VoiceManager extends EventEmitter {
             }
         }
 
-        connection.receiver.speaking.on("start", (userId: string) => {
-            const user = channel.members.get(userId);
+        connection.receiver.speaking.on("start", async (userId: string) => {
+            let user = channel.members.get(userId);
+            if (!user) {
+                try {
+                    user = await channel.guild.members.fetch(userId);
+                } catch (error) {
+                    console.error("Failed to fetch user:", error);
+                }
+            }
             if (user && !user?.user.bot) {
                 this.monitorMember(user as GuildMember, channel);
                 this.streams.get(userId)?.emit("speakingStarted");
