@@ -399,7 +399,9 @@ export class VoiceManager extends EventEmitter {
                 state!.totalLength += buffer.length;
                 state!.lastActive = Date.now();
 
-                const DEBOUNCE_TRANSCRIPTION_THRESHOLD = 3000; // wait for 3 seconds of silence
+                console.log(buffer.length);
+
+                const DEBOUNCE_TRANSCRIPTION_THRESHOLD = 2000; // wait for 2 seconds of silence
 
                 clearTimeout(state!["debounceTimeout"]);
                 state!["debounceTimeout"] = setTimeout(async () => {
@@ -475,6 +477,7 @@ export class VoiceManager extends EventEmitter {
             }
 
             if (state.transcriptionText.length) {
+                this.cleanupAudioPlayer(this.activeAudioPlayer);
                 const finalText = state.transcriptionText;
                 state.transcriptionText = "";
                 await this.handleTranscriptionResult(
