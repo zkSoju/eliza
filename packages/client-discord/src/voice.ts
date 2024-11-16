@@ -186,7 +186,6 @@ export class VoiceManager extends EventEmitter {
         }
     > = new Map();
     private activeAudioPlayer: AudioPlayer | null = null;
-    private speaking: boolean = false;
     private client: Client;
     private runtime: IAgentRuntime;
     private streams: Map<string, Readable> = new Map();
@@ -293,9 +292,32 @@ export class VoiceManager extends EventEmitter {
         }
         const opusDecoder = new prism.opus.Decoder({
             channels: 1,
-            rate: DECODE_SAMPLE_RATE,
-            frameSize: DECODE_FRAME_SIZE,
+            rate: 16000,
+            frameSize: 1024,
         });
+
+        opusDecoder.on("data", (pcmData: Buffer) => {
+            // If the agent is currently speaking, monitor the volume of each user's audio.
+            // If the user's volume exceeds the threshold, it indicates that the user is actively speaking.
+            // In such cases, stop the agent's current audio playback.
+            if (this.activeAudioPlayer) {
+                const samples = new Int16Array(
+                    pcmData.buffer,
+                    pcmData.byteOffset,
+                    pcmData.length / 2
+                );
+                const rms = Math.sqrt(
+                    samples.reduce((sum, sample) => sum + sample * sample, 0) /
+                        samples.length
+                );
+                const volume = rms / 32768;
+                const SPEAKING_THRESHOLD = 0.1;
+                if (volume > SPEAKING_THRESHOLD) {
+                    this.cleanupAudioPlayer(this.activeAudioPlayer);
+                }
+            }
+        });
+
         pipeline(
             receiveStream as AudioReceiveStream,
             opusDecoder as any,
@@ -399,7 +421,7 @@ export class VoiceManager extends EventEmitter {
                 state!.totalLength += buffer.length;
                 state!.lastActive = Date.now();
 
-                const DEBOUNCE_TRANSCRIPTION_THRESHOLD = 2000; // wait for 2 seconds of silence
+                const DEBOUNCE_TRANSCRIPTION_THRESHOLD = 1000; // wait for 1 seconds of silence
 
                 clearTimeout(state!["debounceTimeout"]);
                 state!["debounceTimeout"] = setTimeout(async () => {
