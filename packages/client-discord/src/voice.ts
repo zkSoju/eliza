@@ -176,7 +176,6 @@ export class AudioMonitor {
 }
 
 export class VoiceManager extends EventEmitter {
-    private currentTranscriptionId: string | null = null;
     private userStates: Map<
         string,
         {
@@ -310,12 +309,9 @@ export class VoiceManager extends EventEmitter {
                     pcmData.byteOffset,
                     pcmData.length / 2
                 );
-                const rms = Math.sqrt(
-                    samples.reduce((sum, sample) => sum + sample * sample, 0) /
-                        samples.length
-                );
-                const volume = rms / 32768;
-                volumeBuffer.push(volume);
+                const maxAmplitude = Math.max(...samples.map(Math.abs)) / 32768;
+                volumeBuffer.push(maxAmplitude);
+
                 if (volumeBuffer.length > VOLUME_WINDOW_SIZE) {
                     volumeBuffer.shift();
                 }
@@ -475,9 +471,6 @@ export class VoiceManager extends EventEmitter {
     ) {
         const state = this.userStates.get(userId);
         if (!state || state.buffers.length === 0) return;
-        const transcriptionId = Date.now().toString();
-        this.currentTranscriptionId = transcriptionId;
-
         try {
             const inputBuffer = Buffer.concat(state.buffers, state.totalLength);
             state.buffers.length = 0; // Clear the buffers
@@ -493,20 +486,12 @@ export class VoiceManager extends EventEmitter {
                 .getInstance<ITranscriptionService>()
                 .transcribe(wavBuffer);
 
-            function invalidText(text: string): boolean {
-                if (text.includes("[BLANK_AUDIO]")) {
-                    return true;
-                }
-                // if (text.length < 5 && text.toLowerCase().includes("you")) { // not sure what is this
-                //     return true;
-                // }
-                if (text === null) {
-                    return true;
-                }
-                return false;
+            function isValidTranscription(text: string): boolean {
+                if (!text || text.includes("[BLANK_AUDIO]")) return false;
+                return true;
             }
 
-            if (transcriptionText && !invalidText(transcriptionText)) {
+            if (transcriptionText && isValidTranscription(transcriptionText)) {
                 state.transcriptionText += transcriptionText;
             }
 
@@ -520,8 +505,7 @@ export class VoiceManager extends EventEmitter {
                     channelId,
                     channel,
                     name,
-                    userName,
-                    transcriptionId
+                    userName
                 );
             }
         } catch (error) {
@@ -538,8 +522,7 @@ export class VoiceManager extends EventEmitter {
         channelId: string,
         channel: BaseGuildVoiceChannel,
         name: string,
-        userName: string,
-        transcriptionId: string
+        userName: string
     ) {
         try {
             const roomId = stringToUuid(channelId + "-" + this.runtime.agentId);
@@ -638,21 +621,19 @@ export class VoiceManager extends EventEmitter {
                         responseMemory
                     );
                     state = await this.runtime.updateRecentMessageState(state);
-                    if (transcriptionId === this.currentTranscriptionId) {
-                        // Ensure that only the latest transcription triggers the Eleven Labs API
-                        // to avoid overlapping audio responses and unnecessary expenses
-                        const responseStream = await this.runtime
-                            .getService(ServiceType.SPEECH_GENERATION)
-                            .getInstance<ISpeechService>()
-                            .generate(this.runtime, content.text);
 
-                        if (responseStream) {
-                            await this.playAudioStream(
-                                userId,
-                                responseStream as Readable
-                            );
-                        }
+                    const responseStream = await this.runtime
+                        .getService(ServiceType.SPEECH_GENERATION)
+                        .getInstance<ISpeechService>()
+                        .generate(this.runtime, content.text);
+
+                    if (responseStream) {
+                        await this.playAudioStream(
+                            userId,
+                            responseStream as Readable
+                        );
                     }
+
                     await this.runtime.evaluate(memory, state);
                 } else {
                     console.warn("Empty response, skipping");
