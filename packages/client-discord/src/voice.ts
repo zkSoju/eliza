@@ -399,8 +399,6 @@ export class VoiceManager extends EventEmitter {
                 state!.totalLength += buffer.length;
                 state!.lastActive = Date.now();
 
-                console.log(buffer.length);
-
                 const DEBOUNCE_TRANSCRIPTION_THRESHOLD = 2000; // wait for 2 seconds of silence
 
                 clearTimeout(state!["debounceTimeout"]);
