@@ -9,6 +9,7 @@ import { createOllama } from "ollama-ai-provider";
 import OpenAI from "openai";
 import { default as tiktoken, TiktokenModel } from "tiktoken";
 import Together from "together-ai";
+import ImageFile from "together-ai";
 import { elizaLogger } from "./index.ts";
 import models from "./models.ts";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
@@ -26,6 +27,7 @@ import {
     ModelProviderName,
     ServiceType,
 } from "./types.ts";
+import axios from 'axios'; // Add this import at the top
 
 /**
  * Send a message to the model for a text generateText - receive a string back and parse how you'd like
@@ -654,6 +656,7 @@ export const generateImage = async (
         width: number;
         height: number;
         count?: number;
+        useTogetherAI?: boolean;
     },
     runtime: IAgentRuntime
 ): Promise<{
@@ -661,7 +664,7 @@ export const generateImage = async (
     data?: string[];
     error?: any;
 }> => {
-    const { prompt, width, height } = data;
+    const { prompt, width, height, useTogetherAI } = data;
     let { count } = data;
     if (!count) {
         count = 1;
@@ -670,43 +673,54 @@ export const generateImage = async (
     const model = getModel(runtime.character.modelProvider, ModelClass.IMAGE);
     const modelSettings = models[runtime.character.modelProvider].imageSettings;
     // some fallbacks for backwards compat, should remove in the future
-    const apiKey =
-        runtime.token ??
-        runtime.getSetting("TOGETHER_API_KEY") ??
-        runtime.getSetting("OPENAI_API_KEY");
+   // const apiKey =
+        //runtime.token ??
+        //runtime.getSetting("TOGETHER_API_KEY") ??
+        //runtime.getSetting("OPENAI_API_KEY");
 
     try {
-        if (runtime.character.modelProvider === ModelProviderName.LLAMACLOUD) {
+        const apiKey = runtime.getSetting("TOGETHER_API_KEY") 
+        if (useTogetherAI || runtime.character.modelProvider === ModelProviderName.LLAMACLOUD) {
             const together = new Together({ apiKey: apiKey as string });
+            console.log("generating image from togetherai")
+            console.log("IMAGE GENERATION PROMPT TO TOGETHER: " + prompt);
+
             const response = await together.images.create({
-                model: "black-forest-labs/FLUX.1-schnell",
+                model: "black-forest-labs/FLUX.1-pro",
                 prompt,
                 width,
                 height,
-                steps: modelSettings?.steps ?? 4,
+                steps: modelSettings?.steps ?? 28,
                 n: count,
-            });
-            const urls: string[] = [];
-            for (let i = 0; i < response.data.length; i++) {
-                const json = response.data[i].b64_json;
-                // decode base64
-                const base64 = Buffer.from(json, "base64").toString("base64");
-                urls.push(base64);
-            }
-            const base64s = await Promise.all(
-                urls.map(async (url) => {
-                    const response = await fetch(url);
-                    const blob = await response.blob();
-                    const buffer = await blob.arrayBuffer();
-                    let base64 = Buffer.from(buffer).toString("base64");
-                    base64 = "data:image/jpeg;base64," + base64;
-                    return base64;
-                })
-            );
-            return { success: true, data: base64s };
-        } else {
+            });            
+                // Type assertion to access the URL while we know it exists
+                const imageUrl = (response.data[0] as any).url;
+                console.log("Image URL from Together:", imageUrl);
+                
+                if (!imageUrl) {
+                    console.error("No image URL in response:", response);
+                    return { success: false, error: "No image URL in response" };
+                }
+            
+                // Fetch image data
+                const imageResponse = await fetch(imageUrl);
+                const imageArrayBuffer = await imageResponse.arrayBuffer();
+                const base64Data = Buffer.from(imageArrayBuffer).toString('base64');
+                
+                // Format as data URL
+                const base64Image = `data:image/jpeg;base64,${base64Data}`;
+                
+                return { success: true, data: [base64Image] };
+            
+            
+        }else {
+            const apiKey = runtime.getSetting("OPENAI_API_KEY");
             let targetSize = `${width}x${height}`;
-            if (
+            if (targetSize == "256x256"){
+                targetSize = "256x256"
+                console.log("generating 400 by 400 image")
+            }
+            else if (
                 targetSize !== "1024x1024" &&
                 targetSize !== "1792x1024" &&
                 targetSize !== "1024x1792"
@@ -717,7 +731,7 @@ export const generateImage = async (
             const response = await openai.images.generate({
                 model,
                 prompt,
-                size: targetSize as "1024x1024" | "1792x1024" | "1024x1792",
+                size: targetSize as "1024x1024" | "1792x1024" | "1024x1792" | "512x512" | "256x256",
                 n: count,
                 response_format: "b64_json",
             });
