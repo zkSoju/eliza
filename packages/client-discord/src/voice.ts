@@ -176,6 +176,7 @@ export class AudioMonitor {
 }
 
 export class VoiceManager extends EventEmitter {
+    private currentTranscriptionId: string | null = null;
     private userStates: Map<
         string,
         {
@@ -292,14 +293,17 @@ export class VoiceManager extends EventEmitter {
         }
         const opusDecoder = new prism.opus.Decoder({
             channels: 1,
-            rate: 16000,
-            frameSize: 1024,
+            rate: DECODE_SAMPLE_RATE,
+            frameSize: DECODE_FRAME_SIZE,
         });
-
+        const volumeBuffer: number[] = [];
+        const VOLUME_WINDOW_SIZE = 30;
+        const SPEAKING_THRESHOLD = 0.05;
         opusDecoder.on("data", (pcmData: Buffer) => {
-            // If the agent is currently speaking, monitor the volume of each user's audio.
-            // If the user's volume exceeds the threshold, it indicates that the user is actively speaking.
-            // In such cases, stop the agent's current audio playback.
+            // Monitor the audio volume while the agent is speaking.
+            // If the average volume of the user's audio exceeds the defined threshold, it indicates active speaking.
+            // When active speaking is detected, stop the agent's current audio playback to avoid overlap.
+
             if (this.activeAudioPlayer) {
                 const samples = new Int16Array(
                     pcmData.buffer,
@@ -311,8 +315,16 @@ export class VoiceManager extends EventEmitter {
                         samples.length
                 );
                 const volume = rms / 32768;
-                const SPEAKING_THRESHOLD = 0.1;
-                if (volume > SPEAKING_THRESHOLD) {
+                volumeBuffer.push(volume);
+                if (volumeBuffer.length > VOLUME_WINDOW_SIZE) {
+                    volumeBuffer.shift();
+                }
+                const avgVolume =
+                    volumeBuffer.reduce((sum, v) => sum + v, 0) /
+                    VOLUME_WINDOW_SIZE;
+
+                if (avgVolume > SPEAKING_THRESHOLD) {
+                    volumeBuffer.length = 0;
                     this.cleanupAudioPlayer(this.activeAudioPlayer);
                 }
             }
@@ -421,7 +433,7 @@ export class VoiceManager extends EventEmitter {
                 state!.totalLength += buffer.length;
                 state!.lastActive = Date.now();
 
-                const DEBOUNCE_TRANSCRIPTION_THRESHOLD = 1000; // wait for 1 seconds of silence
+                const DEBOUNCE_TRANSCRIPTION_THRESHOLD = 1500; // wait for 1 seconds of silence
 
                 clearTimeout(state!["debounceTimeout"]);
                 state!["debounceTimeout"] = setTimeout(async () => {
@@ -463,6 +475,8 @@ export class VoiceManager extends EventEmitter {
     ) {
         const state = this.userStates.get(userId);
         if (!state || state.buffers.length === 0) return;
+        const transcriptionId = Date.now().toString();
+        this.currentTranscriptionId = transcriptionId;
 
         try {
             const inputBuffer = Buffer.concat(state.buffers, state.totalLength);
@@ -506,7 +520,8 @@ export class VoiceManager extends EventEmitter {
                     channelId,
                     channel,
                     name,
-                    userName
+                    userName,
+                    transcriptionId
                 );
             }
         } catch (error) {
@@ -523,7 +538,8 @@ export class VoiceManager extends EventEmitter {
         channelId: string,
         channel: BaseGuildVoiceChannel,
         name: string,
-        userName: string
+        userName: string,
+        transcriptionId: string
     ) {
         try {
             const roomId = stringToUuid(channelId + "-" + this.runtime.agentId);
@@ -622,16 +638,20 @@ export class VoiceManager extends EventEmitter {
                         responseMemory
                     );
                     state = await this.runtime.updateRecentMessageState(state);
-                    const responseStream = await this.runtime
-                        .getService(ServiceType.SPEECH_GENERATION)
-                        .getInstance<ISpeechService>()
-                        .generate(this.runtime, content.text);
+                    if (transcriptionId === this.currentTranscriptionId) {
+                        // Ensure that only the latest transcription triggers the Eleven Labs API
+                        // to avoid overlapping audio responses and unnecessary expenses
+                        const responseStream = await this.runtime
+                            .getService(ServiceType.SPEECH_GENERATION)
+                            .getInstance<ISpeechService>()
+                            .generate(this.runtime, content.text);
 
-                    if (responseStream) {
-                        await this.playAudioStream(
-                            userId,
-                            responseStream as Readable
-                        );
+                        if (responseStream) {
+                            await this.playAudioStream(
+                                userId,
+                                responseStream as Readable
+                            );
+                        }
                     }
                     await this.runtime.evaluate(memory, state);
                 } else {
