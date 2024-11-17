@@ -35,7 +35,6 @@ import {
     ITranscriptionService,
     Memory,
     ModelClass,
-    Service,
     ServiceType,
     State,
     UUID,
