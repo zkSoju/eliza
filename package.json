@@ -20,7 +20,6 @@
         "docker": "pnpm docker:build && pnpm docker:run && pnpm docker:bash"
     },
     "devDependencies": {
-        "concurrently": "^9.1.0",
         "husky": "^9.1.6",
         "lerna": "^8.1.5",
         "only-allow": "^1.2.1",
