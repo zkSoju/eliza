@@ -36,9 +36,15 @@ import {
 import {
     canSendMessage,
     generateSummary,
-    InterestChannels,
     sendMessageInChunks,
 } from "./utils.ts";
+
+type InterestChannels = {
+    [key: string]: {
+        lastMessageSent: number;
+        messages: { userId: UUID; userName: string; content: Content }[];
+    };
+};
 
 export class MessageManager {
     private client: Client;
