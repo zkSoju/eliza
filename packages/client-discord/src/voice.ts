@@ -91,7 +91,6 @@ export class AudioMonitor {
         this.readable = readable;
         this.maxSize = maxSize;
         this.readable.on("data", (chunk: Buffer) => {
-            //console.log('AudioMonitor got data');
             if (this.lastFlagged < 0) {
                 this.lastFlagged = this.buffers.length;
             }
@@ -384,7 +383,6 @@ export class VoiceManager extends EventEmitter {
 
     async handleGuildCreate(guild: Guild) {
         console.log(`Joined guild ${guild.name}`);
-        // this.scanGuild(guild);
     }
 
     async handleUserStream(
@@ -668,7 +666,6 @@ export class VoiceManager extends EventEmitter {
         state: State
     ): Promise<boolean> {
         if (userId === this.client.user?.id) return false;
-        // if (message.author.bot) return false;
         const lowerMessage = message.toLowerCase();
         const botName = this.client.user.username.toLowerCase();
         const characterName = this.runtime.character.name.toLowerCase();

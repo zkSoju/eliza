@@ -106,13 +106,6 @@ export async function sendMessageInChunks(
                     content: message.trim(),
                 };
 
-                // if (i === 0 && inReplyTo) {
-                //   // Reply to the specified message for the first chunk
-                //   options.reply = {
-                //     messageReference: inReplyTo,
-                //   };
-                // }
-
                 if (i === messages.length - 1 && files && files.length > 0) {
                     // Attach files to the last message chunk
                     options.files = files;
@@ -235,11 +228,7 @@ export class MessageManager {
     }
 
     async handleMessage(message: DiscordMessage) {
-        if (
-            message.interaction ||
-            message.author.id ===
-                this.client.user?.id /* || message.author?.bot*/
-        )
+        if (message.interaction || message.author.id === this.client.user?.id)
             return;
         const userId = message.author.id as UUID;
         const userName = message.author.username;
@@ -694,7 +683,6 @@ export class MessageManager {
         state: State
     ): Promise<boolean> {
         if (message.author.id === this.client.user?.id) return false;
-        // if (message.author.bot) return false;
         if (message.mentions.has(this.client.user?.id as string)) return true;
 
         const guild = message.guild;
