@@ -19,15 +19,11 @@ import {
     UUID,
 } from "@ai16z/eliza/src/types.ts";
 import { stringToUuid } from "@ai16z/eliza/src/uuid.ts";
-import { generateText, trimTokens } from "@ai16z/eliza/src/generation.ts";
-import { parseJSONObjectFromText } from "@ai16z/eliza/src/parsing.ts";
 import {
     ChannelType,
     Client,
     Message as DiscordMessage,
-    PermissionsBitField,
     TextChannel,
-    ThreadChannel,
 } from "discord.js";
 import { elizaLogger } from "@ai16z/eliza/src/logger.ts";
 import { AttachmentManager } from "./attachments.ts";
