@@ -45,6 +45,8 @@ import {
     discordVoiceHandlerTemplate,
 } from "./templates.ts";
 
+import debounce from "lodash/debounce.js";
+
 export function getWavHeader(
     audioLength: number,
     sampleRate: number,
@@ -405,24 +407,25 @@ export class VoiceManager extends EventEmitter {
 
         const state = this.userStates.get(userId);
 
+        const DEBOUNCE_TRANSCRIPTION_THRESHOLD = 1500; // wait for 1.5 seconds of silence
+
+        const debouncedProcessTranscription = debounce(async () => {
+            await this.processTranscription(
+                userId,
+                channelId,
+                channel,
+                name,
+                userName
+            );
+        }, DEBOUNCE_TRANSCRIPTION_THRESHOLD);
+
         const processBuffer = async (buffer: Buffer) => {
             try {
                 state!.buffers.push(buffer);
                 state!.totalLength += buffer.length;
                 state!.lastActive = Date.now();
 
-                const DEBOUNCE_TRANSCRIPTION_THRESHOLD = 1500; // wait for 1 seconds of silence
-
-                clearTimeout(state!["debounceTimeout"]);
-                state!["debounceTimeout"] = setTimeout(async () => {
-                    await this.processTranscription(
-                        userId,
-                        channelId,
-                        channel,
-                        name,
-                        userName
-                    );
-                }, DEBOUNCE_TRANSCRIPTION_THRESHOLD);
+                debouncedProcessTranscription();
             } catch (error) {
                 console.error(
                     `Error processing buffer for user ${userId}:`,
