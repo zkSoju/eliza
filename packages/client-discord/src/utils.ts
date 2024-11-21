@@ -83,13 +83,6 @@ export async function generateSummary(
     };
 }
 
-export type InterestChannels = {
-    [key: string]: {
-        lastMessageSent: number;
-        messages: { userId: UUID; userName: string; content: Content }[];
-    };
-};
-
 export function canSendMessage(channel) {
     // if it is a DM channel, we can always send messages
     if (channel.type === ChannelType.DM) {
