@@ -1,5 +1,6 @@
 node_modules
 /out
+agent/generatedImages
 
 .env
 .env.production
