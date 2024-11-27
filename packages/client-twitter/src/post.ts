@@ -82,7 +82,7 @@ export class TwitterPostClient {
                     "/lastPost"
             );
 
-            const lastPostTimestamp = lastPost?.timestamp ?? 0;
+            const lastPostTimestamp = lastPost?.timestamp ?? Date.now();
             const minMinutes =
                 parseInt(this.runtime.getSetting("POST_INTERVAL_MIN")) || 90;
             const maxMinutes =
@@ -92,16 +92,41 @@ export class TwitterPostClient {
                 minMinutes;
             const delay = randomMinutes * 60 * 1000;
             const nextTweetTime = lastPostTimestamp + delay;
-            
-            // Store the next tweet time using cacheManager
-            await this.runtime.cacheManager.set(
-                "twitter/" + this.runtime.getSetting("TWITTER_USERNAME") + "/nextTweetTime",
-                { timestamp: nextTweetTime }
-            );
-            elizaLogger.log(`Next tweet scheduled in ${randomMinutes} minutes`);
 
-            if (Date.now() > nextTweetTime) {
+            const now = Date.now();
+
+            if (now >= nextTweetTime) {
+                const executionStart = Date.now();
+                elizaLogger.log(`Tweet time reached (${Math.floor((now - nextTweetTime) / 1000)} seconds past scheduled time), generating new tweet...`);
                 await this.generateNewTweet();
+                const executionEnd = Date.now();
+                
+                // Reschedule after generating the tweet
+                const newNextTweetTime = now + delay;
+                await this.runtime.cacheManager.set(
+                    "twitter/" + this.runtime.getSetting("TWITTER_USERNAME") + "/nextTweetTime",
+                    { 
+                        timestamp: newNextTweetTime,
+                        scheduledAt: now,
+                        intervalMinutes: randomMinutes,
+                        lastExecutionDuration: executionEnd - executionStart
+                    }
+                );
+                const nextTime = new Date(newNextTweetTime);
+                elizaLogger.log(`Next tweet scheduled for ${nextTime.toLocaleTimeString()} (in ${randomMinutes} minutes)`);
+            } else {
+                // Only update the schedule if we're not generating a tweet
+                await this.runtime.cacheManager.set(
+                    "twitter/" + this.runtime.getSetting("TWITTER_USERNAME") + "/nextTweetTime",
+                    { 
+                        timestamp: nextTweetTime,
+                        scheduledAt: now,
+                        intervalMinutes: randomMinutes
+                    }
+                );
+                const minutesUntilTweet = Math.ceil((nextTweetTime - now) / (60 * 1000));
+                const nextTime = new Date(nextTweetTime);
+                elizaLogger.log(`Next tweet scheduled for ${nextTime.toLocaleTimeString()} (in ${minutesUntilTweet} minutes)`);
             }
 
             setTimeout(() => {
@@ -142,7 +167,6 @@ export class TwitterPostClient {
 
     private async generateNewTweet() {
         elizaLogger.log("Generating new tweet...");
-        elizaLogger.log(`Environment variables: ${JSON.stringify(process.env)}`);
         const rawChance = this.runtime.getSetting("IMAGE_GEN_CHANCE") || "30";
         const imageGenChancePercent = parseFloat(rawChance.replace(/[^0-9.]/g, '')) || 30;
         elizaLogger.log(`Image generation chance set to ${imageGenChancePercent}%`);

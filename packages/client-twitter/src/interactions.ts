@@ -179,15 +179,20 @@ export class TwitterInteractionClient {
             // Calculate and log remaining time until next tweet
             const nextTweetTimeData = await this.runtime.cacheManager.get<{
                 timestamp: number;
+                scheduledAt: number;
+                intervalMinutes: number;
+                lastExecutionDuration: number | null;
             }>(
                 "twitter/" + this.runtime.getSetting("TWITTER_USERNAME") + "/nextTweetTime"
             );
             
             if (nextTweetTimeData?.timestamp) {
-                const remainingMs = nextTweetTimeData.timestamp - Date.now();
+                const now = Date.now();
+                const remainingMs = nextTweetTimeData.timestamp - now;
                 if (remainingMs > 0) {
                     const remainingMinutes = Math.ceil(remainingMs / (60 * 1000));
-                    elizaLogger.log(`Next tweet in ${remainingMinutes} minutes`);
+                    const nextTime = new Date(nextTweetTimeData.timestamp);
+                    elizaLogger.log(`Next tweet scheduled for ${nextTime.toLocaleTimeString()} (in ${remainingMinutes} minutes)`);
                 }
             }
         } catch (error) {
