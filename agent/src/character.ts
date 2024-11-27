@@ -1,4 +1,5 @@
-import { Character, ModelProviderName, defaultCharacter } from "@ai16z/eliza";
+import { Character, ModelProviderName, defaultCharacter, Clients } from "@ai16z/eliza";
+import { imageGenerationPlugin } from "@ai16z/plugin-image-generation";
 
 export const character: Character = {
     ...defaultCharacter,
