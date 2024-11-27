@@ -42,6 +42,8 @@
         "node": ">=22"
     },
     "dependencies": {
+        "@ai16z/plugin-image-generation": "0.1.4-alpha.3",
+        "agent-twitter-client": "*",
         "ollama-ai-provider": "^0.16.1",
         "optional": "^0.1.4",
         "sharp": "^0.33.5"
