@@ -5,10 +5,12 @@ import {
     embeddingZeroVector,
     IAgentRuntime,
     ModelClass,
+    ModelProviderName,
     stringToUuid,
+    elizaLogger,
 } from "@ai16z/eliza";
-import { elizaLogger } from "@ai16z/eliza";
 import { ClientBase } from "./base.ts";
+import * as fs from 'fs/promises';
 
 const twitterPostTemplate = `{{timeline}}
 
@@ -89,16 +91,22 @@ export class TwitterPostClient {
                 Math.floor(Math.random() * (maxMinutes - minMinutes + 1)) +
                 minMinutes;
             const delay = randomMinutes * 60 * 1000;
+            const nextTweetTime = lastPostTimestamp + delay;
+            
+            // Store the next tweet time using cacheManager
+            await this.runtime.cacheManager.set(
+                "twitter/" + this.runtime.getSetting("TWITTER_USERNAME") + "/nextTweetTime",
+                { timestamp: nextTweetTime }
+            );
+            elizaLogger.log(`Next tweet scheduled in ${randomMinutes} minutes`);
 
-            if (Date.now() > lastPostTimestamp + delay) {
+            if (Date.now() > nextTweetTime) {
                 await this.generateNewTweet();
             }
 
             setTimeout(() => {
                 generateNewTweetLoop(); // Set up next iteration
             }, delay);
-
-            elizaLogger.log(`Next tweet scheduled in ${randomMinutes} minutes`);
         };
 
         if (postImmediately) {
@@ -113,9 +121,186 @@ export class TwitterPostClient {
         this.runtime = runtime;
     }
 
-    private async generateNewTweet() {
-        elizaLogger.log("Generating new tweet");
+    /**
+     * Convert a data URL or file path to a Buffer
+     * @param input The data URL string or file path
+     * @returns Buffer containing the image data
+     */
+    private async imageToBuffer(input: string): Promise<Buffer> {
+        // Check if it's a data URL
+        if (input.startsWith('data:')) {
+            const matches = input.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+            if (!matches || matches.length !== 3) {
+                throw new Error('Invalid data URL');
+            }
+            return Buffer.from(matches[2], 'base64');
+        }
+        
+        // Otherwise treat it as a file path
+        return fs.readFile(input);
+    }
 
+    private async generateNewTweet() {
+        elizaLogger.log("Generating new tweet...");
+        elizaLogger.log(`Environment variables: ${JSON.stringify(process.env)}`);
+        const rawChance = this.runtime.getSetting("IMAGE_GEN_CHANCE") || "30";
+        const imageGenChancePercent = parseFloat(rawChance.replace(/[^0-9.]/g, '')) || 30;
+        elizaLogger.log(`Image generation chance set to ${imageGenChancePercent}%`);
+        
+        const shouldGenerateImage = Math.random() < (Math.max(0, Math.min(100, imageGenChancePercent)) / 100);
+        elizaLogger.log(`Will ${shouldGenerateImage ? '' : 'not '}generate image for this tweet`);
+
+        try {
+            const content = await this.generateTweetText();
+            if (!content) {
+                elizaLogger.error("Failed to generate tweet text");
+                return;
+            }
+
+            // Check for dry run mode
+            if (this.runtime.getSetting("TWITTER_DRY_RUN") === "true") {
+                elizaLogger.info(`Dry run: would have posted tweet: ${content}`);
+                if (shouldGenerateImage) {
+                    elizaLogger.info("Dry run: would have generated an image");
+                }
+                return;
+            }
+
+            if (shouldGenerateImage) {
+                const imagePrompt = `Generate an image that represents this tweet: ${content}`;
+                
+                try {
+                    // Generate image using the plugin
+                    const imageAction = this.runtime.plugins.find(p => p.name === "imageGeneration")?.actions?.[0];
+                    if (!imageAction?.handler) {
+                        elizaLogger.error("Image generation plugin not found or handler not available");
+                        return;
+                    }
+
+                    // Temporarily set modelProvider to HEURIST for image generation
+                    const originalProvider = this.runtime.character.modelProvider;
+                    this.runtime.character.modelProvider = ModelProviderName.HEURIST;
+
+                    const imageMessage = {
+                        userId: this.runtime.agentId,
+                        roomId: stringToUuid("twitter_image_generation"),
+                        agentId: this.runtime.agentId,
+                        content: {
+                            text: imagePrompt,
+                            action: "GENERATE_IMAGE",
+                            payload: {
+                                prompt: imagePrompt,
+                                model: this.runtime.getSetting("HEURIST_IMAGE_MODEL") || "FLUX.1-dev",
+                                width: 1024,
+                                height: 1024,
+                                steps: 30
+                            }
+                        }
+                    };
+
+                    try {
+                        // Create state for image generation
+                        const state = await this.runtime.composeState(imageMessage, {
+                            type: "GENERATE_IMAGE",
+                            payload: {
+                                prompt: imagePrompt,
+                                model: this.runtime.getSetting("HEURIST_IMAGE_MODEL") || "FLUX.1-dev",
+                                width: 1024,
+                                height: 1024,
+                                steps: 30
+                            }
+                        });
+
+                        const result = await imageAction.handler(
+                            this.runtime,
+                            imageMessage,
+                            state
+                        ) as { success: boolean; data?: string } | undefined;
+
+                        // Restore original modelProvider
+                        this.runtime.character.modelProvider = originalProvider;
+
+                        if (result?.success && result.data) {
+                            // Convert file path or data URL to Buffer
+                            const imageBuffer = await this.imageToBuffer(result.data);
+                            
+                            // Send tweet with image using new API
+                            await this.client.twitterClient.sendTweetWithMedia(content, [imageBuffer]);
+                            elizaLogger.log("Posted tweet with generated image:", content);
+                        } else {
+                            // Fallback to text-only tweet if image generation fails
+                            await this.client.twitterClient.sendTweet(content);
+                            elizaLogger.log("Posted text-only tweet (image generation failed):", content);
+                        }
+                    } catch (error) {
+                        // Restore original modelProvider in case of error
+                        this.runtime.character.modelProvider = originalProvider;
+                        elizaLogger.error("Error details:", {
+                            name: error?.name,
+                            message: error?.message,
+                            stack: error?.stack,
+                            cause: error?.cause
+                        });
+                        throw error;
+                    }
+                } catch (error) {
+                    // Fallback to text-only tweet if image generation fails
+                    elizaLogger.error("Error generating image:", {
+                        name: error?.name,
+                        message: error?.message,
+                        stack: error?.stack,
+                        cause: error?.cause
+                    });
+                    await this.client.twitterClient.sendTweet(content);
+                    elizaLogger.log("Posted text-only tweet (after image error):", content);
+                }
+            } else {
+                // Post text-only tweet
+                await this.client.twitterClient.sendTweet(content);
+                elizaLogger.log("Posted tweet:", content);
+            }
+
+            await this.runtime.cacheManager.set(
+                "twitter/" +
+                    this.runtime.getSetting("TWITTER_USERNAME") +
+                    "/lastPost",
+                {
+                    timestamp: Date.now(),
+                }
+            );
+        } catch (error) {
+            elizaLogger.error("Error generating/posting tweet:", error);
+        }
+    }
+
+    /**
+     * Post a tweet with one or more images
+     * @param text The tweet text
+     * @param images Array of image data as Buffer or data URL strings
+     * @param replyToTweetId Optional tweet ID to reply to
+     */
+    async postTweetWithImages(text: string, images: (Buffer | string)[], replyToTweetId?: string) {
+        try {
+            // Convert any data URLs to Buffers
+            const imageBuffers = await Promise.all(images.map(async img => {
+                if (Buffer.isBuffer(img)) {
+                    return img;
+                }
+                if (typeof img === 'string' && img.startsWith('data:')) {
+                    return await this.imageToBuffer(img);
+                }
+                throw new Error('Invalid image format. Must be Buffer or data URL string.');
+            }));
+
+            await this.client.twitterClient.sendTweetWithMedia(text, imageBuffers, replyToTweetId);
+            elizaLogger.log("Posted tweet with custom images:", text);
+        } catch (error) {
+            elizaLogger.error("Error posting tweet with images:", error);
+            throw error;
+        }
+    }
+
+    private async generateTweetText(): Promise<string | undefined> {
         try {
             await this.runtime.ensureUserExists(
                 this.runtime.agentId,
@@ -127,8 +312,6 @@ export class TwitterPostClient {
             let homeTimeline: Tweet[] = [];
 
             const cachedTimeline = await this.client.getCachedTimeline();
-
-            // console.log({ cachedTimeline });
 
             if (cachedTimeline) {
                 homeTimeline = cachedTimeline;
@@ -183,87 +366,11 @@ export class TwitterPostClient {
                 .trim();
 
             // Use the helper function to truncate to complete sentence
-            const content = truncateToCompleteSentence(formattedTweet);
+            return truncateToCompleteSentence(formattedTweet);
 
-            if (this.runtime.getSetting("TWITTER_DRY_RUN") === "true") {
-                elizaLogger.info(
-                    `Dry run: would have posted tweet: ${content}`
-                );
-                return;
-            }
-
-            try {
-                elizaLogger.log(`Posting new tweet:\n ${content}`);
-
-                const result = await this.client.requestQueue.add(
-                    async () =>
-                        await this.client.twitterClient.sendTweet(content)
-                );
-                const body = await result.json();
-                const tweetResult = body.data.create_tweet.tweet_results.result;
-
-                // console.dir({ tweetResult }, { depth: Infinity });
-                const tweet = {
-                    id: tweetResult.rest_id,
-                    name: this.client.profile.screenName,
-                    username: this.client.profile.username,
-                    text: tweetResult.legacy.full_text,
-                    conversationId: tweetResult.legacy.conversation_id_str,
-                    createdAt: tweetResult.legacy.created_at,
-                    userId: this.client.profile.id,
-                    inReplyToStatusId:
-                        tweetResult.legacy.in_reply_to_status_id_str,
-                    permanentUrl: `https://twitter.com/${this.runtime.getSetting("TWITTER_USERNAME")}/status/${tweetResult.rest_id}`,
-                    hashtags: [],
-                    mentions: [],
-                    photos: [],
-                    thread: [],
-                    urls: [],
-                    videos: [],
-                } as Tweet;
-
-                await this.runtime.cacheManager.set(
-                    `twitter/${this.client.profile.username}/lastPost`,
-                    {
-                        id: tweet.id,
-                        timestamp: Date.now(),
-                    }
-                );
-
-                await this.client.cacheTweet(tweet);
-
-                homeTimeline.push(tweet);
-                await this.client.cacheTimeline(homeTimeline);
-                elizaLogger.log(`Tweet posted:\n ${tweet.permanentUrl}`);
-
-                const roomId = stringToUuid(
-                    tweet.conversationId + "-" + this.runtime.agentId
-                );
-
-                await this.runtime.ensureRoomExists(roomId);
-                await this.runtime.ensureParticipantInRoom(
-                    this.runtime.agentId,
-                    roomId
-                );
-
-                await this.runtime.messageManager.createMemory({
-                    id: stringToUuid(tweet.id + "-" + this.runtime.agentId),
-                    userId: this.runtime.agentId,
-                    agentId: this.runtime.agentId,
-                    content: {
-                        text: newTweetContent.trim(),
-                        url: tweet.permanentUrl,
-                        source: "twitter",
-                    },
-                    roomId,
-                    embedding: embeddingZeroVector,
-                    createdAt: tweet.timestamp * 1000,
-                });
-            } catch (error) {
-                elizaLogger.error("Error sending tweet:", error);
-            }
         } catch (error) {
-            elizaLogger.error("Error generating new tweet:", error);
+            elizaLogger.error("Error generating tweet text:", error);
+            return undefined;
         }
     }
 }
