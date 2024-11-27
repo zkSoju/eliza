@@ -175,12 +175,27 @@ export class TwitterInteractionClient {
             await this.client.cacheLatestCheckedTweetId();
 
             elizaLogger.log("Finished checking Twitter interactions");
+
+            // Calculate and log remaining time until next tweet
+            const nextTweetTimeData = await this.runtime.cacheManager.get<{
+                timestamp: number;
+            }>(
+                "twitter/" + this.runtime.getSetting("TWITTER_USERNAME") + "/nextTweetTime"
+            );
+            
+            if (nextTweetTimeData?.timestamp) {
+                const remainingMs = nextTweetTimeData.timestamp - Date.now();
+                if (remainingMs > 0) {
+                    const remainingMinutes = Math.ceil(remainingMs / (60 * 1000));
+                    elizaLogger.log(`Next tweet in ${remainingMinutes} minutes`);
+                }
+            }
         } catch (error) {
             elizaLogger.error("Error handling Twitter interactions:", error);
         }
     }
 
-    private async handleTweet({
+    async handleTweet({
         tweet,
         message,
         thread,
