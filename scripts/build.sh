@@ -37,6 +37,7 @@ PACKAGES=(
     "plugin-coinbase"
     "client-auto"
     "client-direct"
+    "client-terminal"
     "client-discord"
     "client-telegram"
     "client-twitter"

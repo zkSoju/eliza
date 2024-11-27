@@ -4,6 +4,7 @@ import { AutoClientInterface } from "@ai16z/client-auto";
 import { DirectClientInterface } from "@ai16z/client-direct";
 import { DiscordClientInterface } from "@ai16z/client-discord";
 import { TelegramClientInterface } from "@ai16z/client-telegram";
+import { TerminalClientInterface } from "@ai16z/client-terminal";
 import { TwitterClientInterface } from "@ai16z/client-twitter";
 import {
     AgentRuntime,
@@ -11,7 +12,6 @@ import {
     Character,
     DbCacheAdapter,
     FsCacheAdapter,
-    IAgentRuntime,
     ICacheManager,
     IDatabaseAdapter,
     IDatabaseCacheAdapter,
@@ -20,7 +20,7 @@ import {
     elizaLogger,
     settings,
     stringToUuid,
-    validateCharacterConfig,
+    validateCharacterConfig
 } from "@ai16z/eliza";
 import { zgPlugin } from "@ai16z/plugin-0g";
 import { bootstrapPlugin } from "@ai16z/plugin-bootstrap";
@@ -37,18 +37,13 @@ import { solanaPlugin } from "@ai16z/plugin-solana";
 import Database from "better-sqlite3";
 import fs from "fs";
 import path from "path";
-import readline from "readline";
 import { fileURLToPath } from "url";
 import yargs from "yargs";
 
 const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
 const __dirname = path.dirname(__filename); // get the name of the directory
 
-export const wait = (minTime: number = 1000, maxTime: number = 3000) => {
-    const waitTime =
-        Math.floor(Math.random() * (maxTime - minTime + 1)) + minTime;
-    return new Promise((resolve) => setTimeout(resolve, waitTime));
-};
+import { getTokenForProvider } from "./libs/utils.ts";
 
 export function parseArguments(): {
     character?: string;
@@ -124,68 +119,7 @@ export async function loadCharacters(
     return loadedCharacters;
 }
 
-export function getTokenForProvider(
-    provider: ModelProviderName,
-    character: Character
-) {
-    switch (provider) {
-        case ModelProviderName.OPENAI:
-            return (
-                character.settings?.secrets?.OPENAI_API_KEY ||
-                settings.OPENAI_API_KEY
-            );
-        case ModelProviderName.ETERNALAI:
-            return (
-                character.settings?.secrets?.ETERNALAI_API_KEY ||
-                settings.ETERNALAI_API_KEY
-            );
-        case ModelProviderName.LLAMACLOUD:
-            return (
-                character.settings?.secrets?.LLAMACLOUD_API_KEY ||
-                settings.LLAMACLOUD_API_KEY ||
-                character.settings?.secrets?.TOGETHER_API_KEY ||
-                settings.TOGETHER_API_KEY ||
-                character.settings?.secrets?.XAI_API_KEY ||
-                settings.XAI_API_KEY ||
-                character.settings?.secrets?.OPENAI_API_KEY ||
-                settings.OPENAI_API_KEY
-            );
-        case ModelProviderName.ANTHROPIC:
-            return (
-                character.settings?.secrets?.ANTHROPIC_API_KEY ||
-                character.settings?.secrets?.CLAUDE_API_KEY ||
-                settings.ANTHROPIC_API_KEY ||
-                settings.CLAUDE_API_KEY
-            );
-        case ModelProviderName.REDPILL:
-            return (
-                character.settings?.secrets?.REDPILL_API_KEY ||
-                settings.REDPILL_API_KEY
-            );
-        case ModelProviderName.OPENROUTER:
-            return (
-                character.settings?.secrets?.OPENROUTER ||
-                settings.OPENROUTER_API_KEY
-            );
-        case ModelProviderName.GROK:
-            return (
-                character.settings?.secrets?.GROK_API_KEY ||
-                settings.GROK_API_KEY
-            );
-        case ModelProviderName.HEURIST:
-            return (
-                character.settings?.secrets?.HEURIST_API_KEY ||
-                settings.HEURIST_API_KEY
-            );
-        case ModelProviderName.GROQ:
-            return (
-                character.settings?.secrets?.GROQ_API_KEY ||
-                settings.GROQ_API_KEY
-            );
-    }
-}
-
-function initializeDatabase(dataDir: string) {
+function initializeDatabase(dataDir) {
     if (process.env.POSTGRES_URL) {
         const db = new PostgresDatabaseAdapter({
             connectionString: process.env.POSTGRES_URL,
@@ -203,11 +137,22 @@ function initializeDatabase(dataDir: string) {
 
 export async function initializeClients(
     character: Character,
-    runtime: IAgentRuntime
+    runtime: AgentRuntime,
+    dc: any
 ) {
     const clients = [];
     const clientTypes =
         character.clients?.map((str) => str.toLowerCase()) || [];
+
+    if (clientTypes.includes("direct")) {
+        dc.registerAgent(runtime);
+    }
+
+    if (clientTypes.includes("terminal")) {
+        // MARK: Launches multiple terminal clients when in multi-agent mode, confusing perhaps but not broken.
+        const terminalClient = await TerminalClientInterface.start(runtime);
+        if (terminalClient) clients.push(terminalClient);
+    }
 
     if (clientTypes.includes("auto")) {
         const autoClient = await AutoClientInterface.start(runtime);
@@ -304,30 +249,19 @@ function intializeDbCache(character: Character, db: IDatabaseCacheAdapter) {
     return cache;
 }
 
-async function startAgent(character: Character, directClient) {
+async function startAgent(character: Character, db: any, dc: any) {
     try {
         character.id ??= stringToUuid(character.name);
         character.username ??= character.name;
 
         const token = getTokenForProvider(character.modelProvider, character);
-        const dataDir = path.join(__dirname, "../data");
-
-        if (!fs.existsSync(dataDir)) {
-            fs.mkdirSync(dataDir, { recursive: true });
-        }
-
-        const db = initializeDatabase(dataDir);
-
-        await db.init();
 
         const cache = intializeDbCache(character, db);
         const runtime = createAgent(character, db, cache, token);
 
         await runtime.initialize();
 
-        const clients = await initializeClients(character, runtime);
-
-        directClient.registerAgent(runtime);
+        const clients = await initializeClients(character, runtime, dc);
 
         return clients;
     } catch (error) {
@@ -341,9 +275,7 @@ async function startAgent(character: Character, directClient) {
 }
 
 const startAgents = async () => {
-    const directClient = await DirectClientInterface.start();
     const args = parseArguments();
-
     let charactersArg = args.characters || args.character;
 
     let characters = [defaultCharacter];
@@ -352,69 +284,27 @@ const startAgents = async () => {
         characters = await loadCharacters(charactersArg);
     }
 
+    const dataDir = path.join(__dirname, "../data");
+
+    if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+    }
+
+    const db = initializeDatabase(dataDir);
+    await db.init();
+
+    const dc = await DirectClientInterface.start();
+
     try {
         for (const character of characters) {
-            await startAgent(character, directClient);
+            await startAgent(character, db, dc);
         }
     } catch (error) {
         elizaLogger.error("Error starting agents:", error);
     }
-
-    function chat() {
-        const agentId = characters[0].name ?? "Agent";
-        rl.question("You: ", async (input) => {
-            await handleUserInput(input, agentId);
-            if (input.toLowerCase() !== "exit") {
-                chat(); // Loop back to ask another question
-            }
-        });
-    }
-
-    elizaLogger.log("Chat started. Type 'exit' to quit.");
-    chat();
 };
 
 startAgents().catch((error) => {
     elizaLogger.error("Unhandled error in startAgents:", error);
     process.exit(1); // Exit the process after logging
 });
-
-const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-});
-
-rl.on("SIGINT", () => {
-    rl.close();
-    process.exit(0);
-});
-
-async function handleUserInput(input, agentId) {
-    if (input.toLowerCase() === "exit") {
-        rl.close();
-        process.exit(0);
-        return;
-    }
-
-    try {
-        const serverPort = parseInt(settings.SERVER_PORT || "3000");
-
-        const response = await fetch(
-            `http://localhost:${serverPort}/${agentId}/message`,
-            {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    text: input,
-                    userId: "user",
-                    userName: "User",
-                }),
-            }
-        );
-
-        const data = await response.json();
-        data.forEach((message) => console.log(`${"Agent"}: ${message.text}`));
-    } catch (error) {
-        console.error("Error fetching response:", error);
-    }
-}

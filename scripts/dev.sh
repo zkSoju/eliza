@@ -6,6 +6,7 @@ npx concurrently --raw \
   "pnpm --dir packages/client-discord dev -- $*" \
   "pnpm --dir packages/client-twitter dev -- $*" \
   "pnpm --dir packages/client-direct dev -- $*" \
+  "pnpm --dir packages/client-terminal dev -- $*" \
   "pnpm --dir packages/plugin-bootstrap dev -- $*" \
   "pnpm --dir packages/plugin-node dev -- $*" \
   "pnpm --dir packages/adapter-sqlite dev -- $*" \

@@ -64,11 +64,6 @@ export async function generateText({
 
     elizaLogger.log("Generating text...");
 
-    elizaLogger.info("Generating text with options:", {
-        modelProvider: runtime.modelProvider,
-        model: modelClass,
-    });
-
     const provider = runtime.modelProvider;
     const endpoint =
         runtime.character.modelEndpointOverride || models[provider].endpoint;
