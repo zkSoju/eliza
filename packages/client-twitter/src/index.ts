@@ -4,11 +4,12 @@ import { TwitterInteractionClient } from "./interactions.ts";
 import { IAgentRuntime, Client, elizaLogger } from "@ai16z/eliza";
 import { validateTwitterConfig } from "./enviroment.ts";
 import { ClientBase } from "./base.ts";
+import { imageGenerationPlugin } from "@ai16z/plugin-image-generation";
 
 class TwitterManager {
     client: ClientBase;
     post: TwitterPostClient;
-    search: TwitterSearchClient;
+    search!: TwitterSearchClient;
     interaction: TwitterInteractionClient;
     constructor(runtime: IAgentRuntime) {
         this.client = new ClientBase(runtime);
@@ -22,10 +23,27 @@ class TwitterManager {
 }
 
 export const TwitterClientInterface: Client = {
-    async start(runtime: IAgentRuntime) {
+    async start(runtime?: IAgentRuntime) {
+        if (!runtime) throw new Error("Twitter client requires a runtime");
+        
         await validateTwitterConfig(runtime);
 
+        // Register image generation plugin
+        runtime.plugins.push(imageGenerationPlugin);
+
         elizaLogger.log("Twitter client started");
+        
+        const minInterval = parseInt(runtime.getSetting("POST_INTERVAL_MIN") || "90");
+        const maxInterval = parseInt(runtime.getSetting("POST_INTERVAL_MAX") || "180");
+        elizaLogger.log(`Post interval configured for ${minInterval}-${maxInterval} minutes`);
+        
+        if (runtime.getSetting("IMAGE_GEN") === "TRUE") {
+            elizaLogger.log("Image generation is ENABLED");
+            const imageChance = runtime.getSetting("IMAGE_GEN_CHANCE") || "30";
+            elizaLogger.log(`Image generation chance set to ${imageChance}%`);
+        } else {
+            elizaLogger.log("Image generation is DISABLED");
+        }
 
         const manager = new TwitterManager(runtime);
 
@@ -37,7 +55,7 @@ export const TwitterClientInterface: Client = {
 
         return manager;
     },
-    async stop(runtime: IAgentRuntime) {
+    async stop(runtime?: IAgentRuntime) {
         elizaLogger.warn("Twitter client does not support stopping yet");
     },
 };
