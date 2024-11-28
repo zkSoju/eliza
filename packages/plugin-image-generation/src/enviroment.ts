@@ -1,4 +1,4 @@
-import { IAgentRuntime } from "@ai16z/eliza";
+import { elizaLogger, IAgentRuntime } from "@ai16z/eliza";
 import { z } from "zod";
 
 export const imageGenEnvSchema = z
@@ -45,10 +45,9 @@ export async function validateImageGenConfig(
             const errorMessages = error.errors
                 .map((err) => `${err.path.join(".")}: ${err.message}`)
                 .join("\n");
-            throw new Error(
+            elizaLogger.warn(
                 `Image generation configuration validation failed:\n${errorMessages}`
             );
         }
-        throw error;
     }
 }

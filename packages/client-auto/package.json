@@ -6,7 +6,6 @@
     "types": "dist/index.d.ts",
     "dependencies": {
         "@ai16z/eliza": "workspace:*",
-        "@ai16z/plugin-image-generation": "workspace:*",
         "@ai16z/plugin-solana": "workspace:*",
         "@ai16z/plugin-trustdb": "workspace:*",
         "@types/body-parser": "1.19.5",

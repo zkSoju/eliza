@@ -34,6 +34,7 @@ import { evmPlugin } from "@ai16z/plugin-evm";
 import { createNodePlugin } from "@ai16z/plugin-node";
 import { solanaPlugin } from "@ai16z/plugin-solana";
 import { teePlugin } from "@ai16z/plugin-tee";
+import { imageGenerationPlugin } from "@ai16z/plugin-image-generation";
 
 import buttplugPlugin from "@ai16z/plugin-buttplug";
 import Database from "better-sqlite3";
@@ -295,6 +296,7 @@ export function createAgent(
         character,
         plugins: [
             bootstrapPlugin,
+            imageGenerationPlugin,
             getSecret(character, "CONFLUX_CORE_PRIVATE_KEY")
                 ? confluxPlugin
                 : null,

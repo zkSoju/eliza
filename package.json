@@ -48,7 +48,6 @@
         "csv-parse": "^5.6.0",
         "@0glabs/0g-ts-sdk": "^0.2.1",
         "amqplib": "0.10.5",
-        "@ai16z/plugin-image-generation": "0.1.4-alpha.3",
         "ollama-ai-provider": "^0.16.1",
         "tslog": "^4.9.3"
     },

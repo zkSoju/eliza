@@ -4,7 +4,6 @@ import { TwitterInteractionClient } from "./interactions.ts";
 import { IAgentRuntime, Client, elizaLogger } from "@ai16z/eliza";
 import { validateTwitterConfig } from "./enviroment.ts";
 import { ClientBase } from "./base.ts";
-import { imageGenerationPlugin } from "@ai16z/plugin-image-generation";
 
 class TwitterManager {
     client: ClientBase;
@@ -27,9 +26,6 @@ export const TwitterClientInterface: Client = {
         if (!runtime) throw new Error("Twitter client requires a runtime");
         
         await validateTwitterConfig(runtime);
-
-        // Register image generation plugin
-        runtime.plugins.push(imageGenerationPlugin);
 
         elizaLogger.log("Twitter client started");
         
