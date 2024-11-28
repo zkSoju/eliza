@@ -256,7 +256,7 @@ export class TwitterPostClient {
                             const imageBuffer = await this.imageToBuffer(result.data);
                             
                             // Send tweet with image using new API
-                            await this.client.twitterClient.sendTweetWithMedia(content, [imageBuffer]);
+                            await this.client.twitterClient.sendTweet(content, undefined, [{ data: imageBuffer, mediaType: 'image/jpeg' }]);
                             elizaLogger.log("Posted tweet with generated image:", content);
                         } else {
                             // Fallback to text-only tweet if image generation fails
@@ -323,7 +323,12 @@ export class TwitterPostClient {
                 throw new Error('Invalid image format. Must be Buffer or data URL string.');
             }));
 
-            await this.client.twitterClient.sendTweetWithMedia(text, imageBuffers, replyToTweetId);
+            const imageData = imageBuffers.map(buffer => ({
+                data: buffer,
+                mediaType: 'image/jpeg' // Assuming JPEG format, adjust if needed
+            }));
+
+            await this.client.twitterClient.sendTweet(text, replyToTweetId, imageData);
             elizaLogger.log("Posted tweet with custom images:", text);
         } catch (error) {
             elizaLogger.error("Error posting tweet with images:", error);
