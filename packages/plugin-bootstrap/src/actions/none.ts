@@ -1,7 +1,10 @@
 import {
     ActionExample,
+    Content,
+    HandlerCallback,
     IAgentRuntime,
     Memory,
+    State,
     type Action,
 } from "@ai16z/eliza";
 
@@ -22,8 +25,14 @@ export const noneAction: Action = {
         "Respond but perform no additional action. This is the default if the agent is speaking and not doing anything additional.",
     handler: async (
         _runtime: IAgentRuntime,
-        _message: Memory
+        _message: Memory,
+        _state: State,
+        response: Memory,
+        callback: HandlerCallback
     ): Promise<boolean> => {
+        if (response) {
+            callback(response.content as Content);
+        }
         return true;
     },
     examples: [

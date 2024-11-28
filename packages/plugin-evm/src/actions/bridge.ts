@@ -73,7 +73,7 @@ export class BridgeAction {
 export const bridgeAction = {
   name: 'bridge',
   description: 'Bridge tokens between different chains',
-  handler: async (runtime: IAgentRuntime, message: Memory, state: State, options: any) => {
+  handler: async (runtime: IAgentRuntime, message: Memory, state: State, response: Memory, options) => {
     const walletProvider = new WalletProvider(runtime)
     const action = new BridgeAction(walletProvider)
     return action.bridge(options)

@@ -483,16 +483,17 @@ export class AgentRuntime implements IAgentRuntime {
         state?: State,
         callback?: HandlerCallback
     ): Promise<void> {
-        if (!responses[0].content?.action) {
-            elizaLogger.warn("No action found in the response content.");
-            return;
-        }
+        for (const response of responses) {
+            if (!response.content?.action) {
+                elizaLogger.warn("No action found in the response content.");
+                return;
+            }
 
-        const normalizedAction = responses[0].content.action
-            .toLowerCase()
-            .replace("_", "");
+            const normalizedAction = response.content.action
+                .toLowerCase()
+                .replace("_", "");
 
-        elizaLogger.success(`Normalized action: ${normalizedAction}`);
+            elizaLogger.success(`Normalized action: ${normalizedAction}`);
 
         let action = this.actions.find(
             (a: { name: string }) =>
@@ -529,7 +530,7 @@ export class AgentRuntime implements IAgentRuntime {
         if (!action) {
             elizaLogger.error(
                 "No action found for",
-                responses[0].content.action
+                response.content.action
             );
             return;
         }
@@ -541,9 +542,10 @@ export class AgentRuntime implements IAgentRuntime {
 
         try {
             elizaLogger.info(`Executing handler for action: ${action.name}`);
-            await action.handler(this, message, state, {}, callback);
-        } catch (error) {
+                await action.handler(this, message, state, response, callback);
+            } catch (error) {
             elizaLogger.error(error);
+            }
         }
     }
 

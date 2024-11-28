@@ -86,7 +86,7 @@ export class SwapAction {
 export const swapAction = {
   name: 'swap',
   description: 'Swap tokens on the same chain',
-  handler: async (runtime: IAgentRuntime, message: Memory, state: State, options: any, callback?: any) => {
+  handler: async (runtime: IAgentRuntime, message: Memory, state: State, response: Memory, callback?: any) => {
     try {
       const walletProvider = new WalletProvider(runtime)
       const action = new SwapAction(walletProvider)

@@ -47,7 +47,7 @@ export class TransferAction {
 export const transferAction = {
   name: 'transfer',
   description: 'Transfer tokens between addresses on the same chain',
-  handler: async (runtime: IAgentRuntime, message: Memory, state: State, options: any) => {
+  handler: async (runtime: IAgentRuntime, message: Memory, state: State, response: Memory) => {
     const walletProvider = new WalletProvider(runtime)
     const action = new TransferAction(walletProvider)
     return action.transfer(runtime, options)
