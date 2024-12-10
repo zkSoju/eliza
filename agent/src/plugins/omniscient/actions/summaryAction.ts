@@ -61,20 +61,17 @@ export const summaryAction: Action = {
             );
         }
 
+        const criticalIssues = data.issues.filter((i) => i.priority >= 2);
+
         return generateDirectResponse(
             runtime,
             state,
             callback,
             {
-                ...state,
-                projects: JSON.stringify(data.projects, null, 2),
-                criticalIssues: JSON.stringify(
-                    data.issues.filter((i) => i.priority >= 2),
-                    null,
-                    2
-                ),
-                teams: JSON.stringify(data.teams, null, 2),
-                issues: JSON.stringify(data.issues, null, 2),
+                projects: data.projects,
+                criticalIssues,
+                teams: data.teams,
+                issues: data.issues,
                 lastUpdated: new Date(data.lastUpdated).toLocaleString(),
             },
             summaryTemplate,

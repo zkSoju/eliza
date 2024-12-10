@@ -88,15 +88,25 @@ export async function generateDirectResponse(
     options: MessageOptions = {}
 ): Promise<boolean> {
     try {
-        elizaLogger.info("Generating direct response");
+        // Stringify all context values
+        const stringifiedContext = Object.fromEntries(
+            Object.entries(context).map(([key, value]) => [
+                key,
+                typeof value === "string"
+                    ? value
+                    : JSON.stringify(value, null, 2),
+            ])
+        );
 
         const composedContext = composeContext({
             state: {
                 ...state,
-                context,
+                ...stringifiedContext,
             },
             template,
         });
+
+        elizaLogger.info("Composed context:", JSON.stringify(composedContext));
 
         const response = await generateText({
             runtime,

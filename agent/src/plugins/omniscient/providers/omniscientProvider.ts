@@ -121,7 +121,7 @@ export class OmniscientProvider {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `${apiKey}`,
+                    Authorization: apiKey,
                 },
                 body: JSON.stringify({
                     query: QUERY,
@@ -143,10 +143,12 @@ export class OmniscientProvider {
 
             const data = await response.json();
 
+            elizaLogger.info("Linear API response:", JSON.stringify(data));
+
             if (data.errors) {
                 elizaLogger.error(
                     "GraphQL Errors:",
-                    JSON.stringify(data.errors, null, 2)
+                    JSON.stringify(data.errors)
                 );
                 throw new Error(`GraphQL errors: ${data.errors[0].message}`);
             }
@@ -181,6 +183,11 @@ export class OmniscientProvider {
                 lastUpdated: Date.now(),
                 ttl: OmniscientProvider.CACHE_TTL,
             };
+
+            this.runtime.cacheManager?.set(
+                `${this.runtime.character.name}/omniscient-data`,
+                cachedData
+            );
 
             return cachedData;
         } catch (error) {
