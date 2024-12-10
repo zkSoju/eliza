@@ -1,4 +1,4 @@
-[@ai16z/eliza v0.1.5-alpha.3](../index.md) / GenerationOptions
+[@ai16z/eliza v0.1.5-alpha.5](../index.md) / GenerationOptions
 
 # Interface: GenerationOptions
 
@@ -12,7 +12,7 @@ Configuration options for generating objects with a model.
 
 #### Defined in
 
-[packages/core/src/generation.ts:1058](https://github.com/monilpat/eliza/blob/main/packages/core/src/generation.ts#L1058)
+[packages/core/src/generation.ts:1091](https://github.com/0xHoneyJar/thj-agents/blob/main/packages/core/src/generation.ts#L1091)
 
 ***
 
@@ -22,7 +22,7 @@ Configuration options for generating objects with a model.
 
 #### Defined in
 
-[packages/core/src/generation.ts:1059](https://github.com/monilpat/eliza/blob/main/packages/core/src/generation.ts#L1059)
+[packages/core/src/generation.ts:1092](https://github.com/0xHoneyJar/thj-agents/blob/main/packages/core/src/generation.ts#L1092)
 
 ***
 
@@ -32,7 +32,7 @@ Configuration options for generating objects with a model.
 
 #### Defined in
 
-[packages/core/src/generation.ts:1060](https://github.com/monilpat/eliza/blob/main/packages/core/src/generation.ts#L1060)
+[packages/core/src/generation.ts:1093](https://github.com/0xHoneyJar/thj-agents/blob/main/packages/core/src/generation.ts#L1093)
 
 ***
 
@@ -42,7 +42,7 @@ Configuration options for generating objects with a model.
 
 #### Defined in
 
-[packages/core/src/generation.ts:1061](https://github.com/monilpat/eliza/blob/main/packages/core/src/generation.ts#L1061)
+[packages/core/src/generation.ts:1094](https://github.com/0xHoneyJar/thj-agents/blob/main/packages/core/src/generation.ts#L1094)
 
 ***
 
@@ -52,7 +52,7 @@ Configuration options for generating objects with a model.
 
 #### Defined in
 
-[packages/core/src/generation.ts:1062](https://github.com/monilpat/eliza/blob/main/packages/core/src/generation.ts#L1062)
+[packages/core/src/generation.ts:1095](https://github.com/0xHoneyJar/thj-agents/blob/main/packages/core/src/generation.ts#L1095)
 
 ***
 
@@ -62,7 +62,7 @@ Configuration options for generating objects with a model.
 
 #### Defined in
 
-[packages/core/src/generation.ts:1063](https://github.com/monilpat/eliza/blob/main/packages/core/src/generation.ts#L1063)
+[packages/core/src/generation.ts:1096](https://github.com/0xHoneyJar/thj-agents/blob/main/packages/core/src/generation.ts#L1096)
 
 ***
 
@@ -72,7 +72,7 @@ Configuration options for generating objects with a model.
 
 #### Defined in
 
-[packages/core/src/generation.ts:1064](https://github.com/monilpat/eliza/blob/main/packages/core/src/generation.ts#L1064)
+[packages/core/src/generation.ts:1097](https://github.com/0xHoneyJar/thj-agents/blob/main/packages/core/src/generation.ts#L1097)
 
 ***
 
@@ -82,7 +82,7 @@ Configuration options for generating objects with a model.
 
 #### Defined in
 
-[packages/core/src/generation.ts:1065](https://github.com/monilpat/eliza/blob/main/packages/core/src/generation.ts#L1065)
+[packages/core/src/generation.ts:1098](https://github.com/0xHoneyJar/thj-agents/blob/main/packages/core/src/generation.ts#L1098)
 
 ***
 
@@ -92,4 +92,4 @@ Configuration options for generating objects with a model.
 
 #### Defined in
 
-[packages/core/src/generation.ts:1066](https://github.com/monilpat/eliza/blob/main/packages/core/src/generation.ts#L1066)
+[packages/core/src/generation.ts:1099](https://github.com/0xHoneyJar/thj-agents/blob/main/packages/core/src/generation.ts#L1099)

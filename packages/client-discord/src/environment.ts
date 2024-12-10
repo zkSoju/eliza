@@ -16,11 +16,13 @@ export async function validateDiscordConfig(
     try {
         const config = {
             DISCORD_APPLICATION_ID:
-                runtime.getSetting("DISCORD_APPLICATION_ID") ||
-                process.env.DISCORD_APPLICATION_ID,
+                runtime.getSetting(
+                    `${runtime.character.name.toUpperCase()}_DISCORD_APPLICATION_ID`
+                ) || process.env.DISCORD_APPLICATION_ID,
             DISCORD_API_TOKEN:
-                runtime.getSetting("DISCORD_API_TOKEN") ||
-                process.env.DISCORD_API_TOKEN,
+                runtime.getSetting(
+                    `${runtime.character.name.toUpperCase()}_DISCORD_API_TOKEN`
+                ) || process.env.DISCORD_API_TOKEN,
         };
 
         return discordEnvSchema.parse(config);
