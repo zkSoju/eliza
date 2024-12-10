@@ -1,7 +1,10 @@
-import { composeContext } from "@ai16z/eliza";
-import { generateMessageResponse, generateShouldRespond } from "@ai16z/eliza";
 import {
+    composeContext,
     Content,
+    elizaLogger,
+    generateMessageResponse,
+    generateShouldRespond,
+    getEmbeddingZeroVector,
     HandlerCallback,
     IAgentRuntime,
     IBrowserService,
@@ -12,23 +15,22 @@ import {
     ModelClass,
     ServiceType,
     State,
+    stringToUuid,
     UUID,
 } from "@ai16z/eliza";
-import { stringToUuid, getEmbeddingZeroVector } from "@ai16z/eliza";
 import {
     ChannelType,
     Client,
     Message as DiscordMessage,
     TextChannel,
 } from "discord.js";
-import { elizaLogger } from "@ai16z/eliza";
 import { AttachmentManager } from "./attachments.ts";
-import { VoiceManager } from "./voice.ts";
 import {
-    discordShouldRespondTemplate,
     discordMessageHandlerTemplate,
+    discordShouldRespondTemplate,
 } from "./templates.ts";
-import { sendMessageInChunks, canSendMessage } from "./utils.ts";
+import { canSendMessage, sendMessageInChunks } from "./utils.ts";
+import { VoiceManager } from "./voice.ts";
 
 export type InterestChannels = {
     [key: string]: {
@@ -36,6 +38,13 @@ export type InterestChannels = {
         messages: { userId: UUID; userName: string; content: Content }[];
     };
 };
+
+interface DiscordClientConfig {
+    shouldIgnoreBotMessages?: boolean;
+    shouldIgnoreDirectMessages?: boolean;
+    allowedChannels?: string[];
+    allowedRoles?: string[];
+}
 
 export class MessageManager {
     private client: Client;
@@ -60,6 +69,36 @@ export class MessageManager {
                 this.client.user?.id /* || message.author?.bot*/
         )
             return;
+
+        const config = this.runtime.character.clientConfig
+            ?.discord as DiscordClientConfig;
+
+        // Check if message is in allowed channels
+        if (config?.allowedChannels?.length) {
+            const channelId = message.channel.id;
+
+            if (!config.allowedChannels.includes(channelId)) {
+                elizaLogger.debug(
+                    `Ignoring message from non-allowed channel ${channelId}`
+                );
+                return;
+            }
+        }
+
+        // Check if author has allowed roles (for guild messages)
+        if (config?.allowedRoles?.length && message.guild) {
+            const member = message.guild.members.cache.get(message.author.id);
+            const hasAllowedRole = member?.roles.cache.some((role) =>
+                config.allowedRoles?.includes(role.id)
+            );
+
+            if (!hasAllowedRole) {
+                elizaLogger.debug(
+                    `Ignoring message from user without allowed roles`
+                );
+                return;
+            }
+        }
 
         if (
             this.runtime.character.clientConfig?.discord

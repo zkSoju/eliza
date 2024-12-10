@@ -323,11 +323,11 @@ export async function initializeClients(
         clients.push(twitterClients);
     }
 
-    if (clientTypes.includes("farcaster")) {
-        const farcasterClients = new FarcasterAgentClient(runtime);
-        farcasterClients.start();
-        clients.push(farcasterClients);
-    }
+    // if (clientTypes.includes("farcaster")) {
+    //     const farcasterClients = new FarcasterAgentClient(runtime);
+    //     farcasterClients.start();
+    //     clients.push(farcasterClients);
+    // }
 
     if (character.plugins?.length > 0) {
         for (const plugin of character.plugins) {
