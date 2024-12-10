@@ -44,6 +44,7 @@ import readline from "readline";
 import { fileURLToPath } from "url";
 import yargs from "yargs";
 import berachainPlugin from "./plugins/berachain/berachainPlugin";
+import omniscientPlugin from "./plugins/omniscient/omniscientPlugin";
 
 const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
 const __dirname = path.dirname(__filename); // get the name of the directory
@@ -343,7 +344,11 @@ export async function initializeClients(
 }
 
 function getSecret(character: Character, secret: string) {
-    return character.settings.secrets?.[secret] || process.env[secret];
+    return (
+        character.settings.secrets?.[secret] ||
+        process.env[secret] ||
+        process.env[`${character.name.toUpperCase()}_${secret}`]
+    );
 }
 
 let nodePlugin: any | undefined;
@@ -370,10 +375,8 @@ export function createAgent(
         character,
         plugins: [
             bootstrapPlugin,
-            getSecret(character, "EVM_PRIVATE_KEY") ||
-            getSecret(character, "WALLET_PUBLIC_KEY")
-                ? berachainPlugin
-                : null,
+            getSecret(character, "LINEAR_API_KEY") ? omniscientPlugin : null,
+            getSecret(character, "EVM_PRIVATE_KEY") ? berachainPlugin : null,
             getSecret(character, "CONFLUX_CORE_PRIVATE_KEY")
                 ? confluxPlugin
                 : null,
@@ -489,6 +492,7 @@ const startAgents = async () => {
     let characters = [defaultCharacter];
 
     if (charactersArg) {
+        elizaLogger.log(charactersArg);
         characters = await loadCharacters(charactersArg);
     }
 

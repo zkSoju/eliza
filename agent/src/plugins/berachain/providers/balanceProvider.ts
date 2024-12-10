@@ -100,9 +100,9 @@ export const balanceAction: Action = {
             if (!walletClient) {
                 return await generateActionResponse(
                     runtime,
-                    "Wallet not initialized or accessible",
                     state,
                     callback,
+                    "Wallet not initialized or accessible",
                     { error: "Wallet client not initialized" }
                 );
             }
@@ -113,9 +113,9 @@ export const balanceAction: Action = {
             if (!pouchData) {
                 return await generateActionResponse(
                     runtime,
-                    "Unable to access wallet data",
                     state,
                     callback,
+                    "Unable to access wallet data",
                     { error: "No pouch data found" }
                 );
             }
@@ -130,9 +130,9 @@ export const balanceAction: Action = {
 
                 return await generateActionResponse(
                     runtime,
-                    `Current BERA: ${formattedBera} ($${beraValueUSD.toFixed(2)})`,
                     state,
                     callback,
+                    `Current BERA: ${formattedBera} ($${beraValueUSD.toFixed(2)})`,
                     {
                         success: true,
                         data: {
@@ -154,18 +154,18 @@ export const balanceAction: Action = {
                 if (!token) {
                     return await generateActionResponse(
                         runtime,
-                        `Token ${balanceContent.token.toUpperCase()} not found in wallet`,
                         state,
                         callback,
+                        `Token ${balanceContent.token.toUpperCase()} not found in wallet`,
                         { error: "Token not found" }
                     );
                 }
 
                 return await generateActionResponse(
                     runtime,
-                    `${token.symbol}: ${token.formattedBalance} ($${token.valueUSD.toFixed(2)})`,
                     state,
                     callback,
+                    `${token.symbol}: ${token.formattedBalance} ($${token.valueUSD.toFixed(2)})`,
                     {
                         success: true,
                         data: {
@@ -200,9 +200,9 @@ export const balanceAction: Action = {
 
                 return await generateActionResponse(
                     runtime,
-                    balanceText,
                     state,
                     callback,
+                    balanceText,
                     {
                         success: true,
                         data: {
@@ -228,9 +228,9 @@ export const balanceAction: Action = {
             logError(error);
             return await generateActionResponse(
                 runtime,
-                "Error occurred while checking balances",
                 state,
                 callback,
+                "Error occurred while checking balances",
                 {
                     error:
                         error instanceof Error

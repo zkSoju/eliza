@@ -159,9 +159,9 @@ export const sendAction: Action = {
 
                 return await generateActionResponse(
                     runtime,
-                    `Need more details for token send: \n${guidanceText}`,
                     state,
                     callback,
+                    `Need more details for token send: \n${guidanceText}`,
                     {
                         error: "Incomplete send details",
                         data: {
@@ -177,18 +177,18 @@ export const sendAction: Action = {
             if (!content.token || !content.address) {
                 return await generateActionResponse(
                     runtime,
-                    "Missing required token or address information",
                     state,
                     callback,
+                    "Missing required token or address information",
                     { error: "Missing required fields" }
                 );
             }
 
             await generateActionResponse(
                 runtime,
-                "Checking token availability and preparing transfer",
                 state,
                 callback,
+                "Checking token availability and preparing transfer",
                 {
                     success: true,
                     data: { status: "checking" },
@@ -234,9 +234,9 @@ export const sendAction: Action = {
 
                 return await generateActionResponse(
                     runtime,
-                    `Successfully transferred ${result.amount} ${result.token} to ${result.to}. ${feeText} Transaction hash: ${result.hash}`,
                     state,
                     callback,
+                    `Successfully transferred ${result.amount} ${result.token} to ${result.to}. ${feeText} Transaction hash: ${result.hash}`,
                     {
                         success: true,
                         data: {
@@ -254,9 +254,9 @@ export const sendAction: Action = {
                     error instanceof Error ? error.message : "Unknown error";
                 return await generateActionResponse(
                     runtime,
-                    `Transfer failed: ${errorMessage}`,
                     state,
                     callback,
+                    `Transfer failed: ${errorMessage}`,
                     { error: errorMessage }
                 );
             }
@@ -264,9 +264,9 @@ export const sendAction: Action = {
             elizaLogger.error("Error in send action:", error);
             return await generateActionResponse(
                 runtime,
-                "Failed to send tokens",
                 state,
                 callback,
+                "Failed to send tokens",
                 { error: "Send failed" }
             );
         }

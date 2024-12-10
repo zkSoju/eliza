@@ -38,9 +38,9 @@ export const walletAction: Action = {
             if (!walletClient) {
                 return await generateActionResponse(
                     runtime,
-                    "Wallet not found or not initialized. Unable to share wallet address.",
                     state,
                     callback,
+                    "Wallet not found or not initialized. Unable to share wallet address.",
                     { error: "Wallet not initialized" }
                 );
             }
@@ -49,9 +49,9 @@ export const walletAction: Action = {
 
             return await generateActionResponse(
                 runtime,
-                `Sharing wallet address: ${address}. Ready to receive tokens.`,
                 state,
                 callback,
+                `Sharing wallet address: ${address}. Ready to receive tokens.`,
                 {
                     success: true,
                     data: { address },
@@ -60,9 +60,9 @@ export const walletAction: Action = {
         } catch (error) {
             return await generateActionResponse(
                 runtime,
-                "Error occurred while trying to access wallet address.",
                 state,
                 callback,
+                "Error occurred while trying to access wallet address.",
                 { error: "Failed to get wallet address" }
             );
         }

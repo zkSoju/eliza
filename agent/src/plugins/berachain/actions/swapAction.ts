@@ -174,9 +174,9 @@ async function checkAndApproveToken(
 
         await generateActionResponse(
             runtime,
-            "ser, need to approve tokens first",
             state,
             callback,
+            "Token approval initiated",
             {
                 success: true,
                 data: { status: "approving" },
@@ -196,9 +196,9 @@ async function checkAndApproveToken(
 
         await generateActionResponse(
             runtime,
-            "ser, tokens approved, sending it with max leverage",
             state,
             callback,
+            "Token approval confirmed",
             {
                 success: true,
                 data: { status: "approved", hash },
@@ -210,9 +210,9 @@ async function checkAndApproveToken(
         elizaLogger.error("Approval error:", error);
         return await generateActionResponse(
             runtime,
-            `Error approving token: ${error instanceof Error ? error.message : "Unknown error"}`,
             state,
             callback,
+            `Error approving token: ${error instanceof Error ? error.message : "Unknown error"}`,
             { error: "Approval failed" }
         );
     }
@@ -363,9 +363,9 @@ export const swapAction: Action = {
 
                 return await generateActionResponse(
                     runtime,
-                    `Need more details for swap: \n${guidanceText}`,
                     state,
                     callback,
+                    `Need more details for swap: \n${guidanceText}`,
                     {
                         error: "Incomplete swap details",
                         data: {
@@ -406,9 +406,9 @@ export const swapAction: Action = {
 
                 return await generateActionResponse(
                     runtime,
-                    formatSwapPreview(swapContent, balance),
                     state,
                     callback,
+                    formatSwapPreview(swapContent, balance),
                     {
                         success: true,
                         data: {
@@ -427,9 +427,9 @@ export const swapAction: Action = {
             if (!swapContent.fromToken || !swapContent.toToken) {
                 return await generateActionResponse(
                     runtime,
-                    "Please specify which tokens you would like to swap. Available tokens include BERA, HONEY, STGUSDC and others.",
                     state,
                     callback,
+                    "Please specify which tokens you would like to swap. Available tokens include BERA, HONEY, STGUSDC and others.",
                     {
                         data: {
                             needsTokens: true,
@@ -454,9 +454,9 @@ export const swapAction: Action = {
 
                 return await generateActionResponse(
                     runtime,
-                    responseText,
                     state,
                     callback,
+                    responseText,
                     {
                         error: "Incomplete swap details",
                         data: {
@@ -480,9 +480,9 @@ export const swapAction: Action = {
             if (!walletClient || !publicClient) {
                 return await generateActionResponse(
                     runtime,
-                    "Wallet not initialized or accessible",
                     state,
                     callback,
+                    "Wallet not initialized or accessible",
                     { error: "Wallet client not initialized" }
                 );
             }
@@ -495,9 +495,9 @@ export const swapAction: Action = {
             if (!pouchData) {
                 return await generateActionResponse(
                     runtime,
-                    "Unable to access wallet data",
                     state,
                     callback,
+                    "Unable to access wallet data",
                     { error: "No pouch data found" }
                 );
             }
@@ -509,9 +509,9 @@ export const swapAction: Action = {
                 if (balance < amountWei) {
                     return await generateActionResponse(
                         runtime,
-                        `Insufficient ${swapContent.fromToken.toUpperCase()} balance. Have ${formatUnits(balance, 18)}, need ${swapContent.amount}`,
                         state,
                         callback,
+                        `Insufficient ${swapContent.fromToken.toUpperCase()} balance. Have ${formatUnits(balance, 18)}, need ${swapContent.amount}`,
                         { error: "Insufficient balance" }
                     );
                 }
@@ -524,9 +524,9 @@ export const swapAction: Action = {
                 if (!token) {
                     return await generateActionResponse(
                         runtime,
-                        `No ${swapContent.fromToken.toUpperCase()} found in wallet. Available tokens: ${pouchData.tokens.map((t) => t.symbol).join(", ")}`,
                         state,
                         callback,
+                        `No ${swapContent.fromToken.toUpperCase()} found in wallet. Available tokens: ${pouchData.tokens.map((t) => t.symbol).join(", ")}`,
                         { error: "Token not found" }
                     );
                 }
@@ -537,9 +537,9 @@ export const swapAction: Action = {
                 if (balance < amountWei) {
                     return await generateActionResponse(
                         runtime,
-                        `Insufficient ${swapContent.fromToken.toUpperCase()} balance. Have ${formatUnits(balance, token.decimals)}, need ${swapContent.amount}`,
                         state,
                         callback,
+                        `Insufficient ${swapContent.fromToken.toUpperCase()} balance. Have ${formatUnits(balance, token.decimals)}, need ${swapContent.amount}`,
                         { error: "Insufficient balance" }
                     );
                 }
@@ -591,9 +591,9 @@ export const swapAction: Action = {
 
                 return await generateActionResponse(
                     runtime,
-                    `Invalid token ${invalidToken}. Valid tokens: ${availableTokens}`,
                     state,
                     callback,
+                    `Invalid token ${invalidToken}. Valid tokens: ${availableTokens}`,
                     {
                         error: "Invalid token",
                         data: {
@@ -619,9 +619,9 @@ export const swapAction: Action = {
 
             await generateActionResponse(
                 runtime,
-                "ser, preparing to send it with leverage",
                 state,
                 callback,
+                "Preparing swap transaction",
                 {
                     success: true,
                     data: { status: "preparing" },
@@ -666,9 +666,9 @@ export const swapAction: Action = {
             if (!approved) {
                 return await generateActionResponse(
                     runtime,
-                    `Failed to approve ${swapContent.fromToken} for trading`,
                     state,
                     callback,
+                    `Failed to approve ${swapContent.fromToken} for trading`,
                     { error: "Approval failed" }
                 );
             }
@@ -702,9 +702,9 @@ export const swapAction: Action = {
 
                 return await generateActionResponse(
                     runtime,
-                    `Successfully swapped ${swapContent.amount} ${swapContent.fromToken} for ${formatUnits(amountOut, toTokenDecimals)} ${swapContent.toToken}. Transaction hash: ${receipt.transactionHash}`,
                     state,
                     callback,
+                    `Successfully swapped ${swapContent.amount} ${swapContent.fromToken} for ${formatUnits(amountOut, toTokenDecimals)} ${swapContent.toToken}. Transaction hash: ${receipt.transactionHash}`,
                     {
                         success: true,
                         data: {
@@ -723,25 +723,25 @@ export const swapAction: Action = {
                 if (swapError.message?.includes("insufficient")) {
                     return await generateActionResponse(
                         runtime,
-                        "Insufficient liquidity available for this swap",
                         state,
                         callback,
+                        "Insufficient liquidity available for this swap",
                         { error: "Insufficient liquidity" }
                     );
                 } else if (swapError.message?.includes("slippage")) {
                     return await generateActionResponse(
                         runtime,
-                        "Price impact too high for this swap",
                         state,
                         callback,
+                        "Price impact too high for this swap",
                         { error: "High slippage" }
                     );
                 } else {
                     return await generateActionResponse(
                         runtime,
-                        `Swap failed: ${swapError.message || "Unknown error"}`,
                         state,
                         callback,
+                        `Swap failed: ${swapError.message || "Unknown error"}`,
                         { error: swapError.message || "Swap failed" }
                     );
                 }
@@ -750,9 +750,9 @@ export const swapAction: Action = {
             logError(error);
             return await generateActionResponse(
                 runtime,
-                `Error occurred during swap: ${error instanceof Error ? error.message : "Unknown error"}`,
                 state,
                 callback,
+                `Error occurred during swap: ${error instanceof Error ? error.message : "Unknown error"}`,
                 {
                     error:
                         error instanceof Error

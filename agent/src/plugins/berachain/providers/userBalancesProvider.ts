@@ -77,9 +77,9 @@ export const checkUserBalanceAction: Action = {
             if (!isBalanceCheckContent(content)) {
                 return await generateActionResponse(
                     runtime,
-                    "Please provide a valid wallet address to check balances",
                     state,
                     callback,
+                    "Please provide a valid wallet address to check balances",
                     { error: "Invalid or missing wallet address" }
                 );
             }
@@ -88,9 +88,9 @@ export const checkUserBalanceAction: Action = {
             if (!isAddress(content.walletAddress)) {
                 return await generateActionResponse(
                     runtime,
-                    "Invalid wallet address format provided",
                     state,
                     callback,
+                    "Invalid wallet address format provided",
                     { error: "Invalid address format" }
                 );
             }

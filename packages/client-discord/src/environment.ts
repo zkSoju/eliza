@@ -1,4 +1,4 @@
-import { IAgentRuntime } from "@ai16z/eliza";
+import { elizaLogger, IAgentRuntime } from "@ai16z/eliza";
 import { z } from "zod";
 
 export const discordEnvSchema = z.object({
@@ -14,6 +14,10 @@ export async function validateDiscordConfig(
     runtime: IAgentRuntime
 ): Promise<DiscordConfig> {
     try {
+        elizaLogger.log(
+            `${runtime.character.name.toUpperCase()}_DISCORD_APPLICATION_ID`
+        );
+
         const config = {
             DISCORD_APPLICATION_ID:
                 runtime.getSetting("DISCORD_APPLICATION_ID") ||

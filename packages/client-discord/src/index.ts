@@ -1,7 +1,11 @@
-import { getEmbeddingZeroVector } from "@ai16z/eliza";
-import { Character, Client as ElizaClient, IAgentRuntime } from "@ai16z/eliza";
-import { stringToUuid } from "@ai16z/eliza";
-import { elizaLogger } from "@ai16z/eliza";
+import {
+    Character,
+    Client as ElizaClient,
+    elizaLogger,
+    getEmbeddingZeroVector,
+    IAgentRuntime,
+    stringToUuid,
+} from "@ai16z/eliza";
 import {
     Client,
     Events,
@@ -9,6 +13,7 @@ import {
     Guild,
     MessageReaction,
     Partials,
+    PermissionsBitField,
     User,
 } from "discord.js";
 import { EventEmitter } from "events";
@@ -22,7 +27,6 @@ import { MessageManager } from "./messages.ts";
 import channelStateProvider from "./providers/channelState.ts";
 import voiceStateProvider from "./providers/voiceState.ts";
 import { VoiceManager } from "./voice.ts";
-import { PermissionsBitField } from "discord.js";
 
 export class DiscordClient extends EventEmitter {
     apiToken: string;
@@ -35,7 +39,11 @@ export class DiscordClient extends EventEmitter {
     constructor(runtime: IAgentRuntime) {
         super();
 
-        this.apiToken = runtime.getSetting("DISCORD_API_TOKEN") as string;
+        this.apiToken =
+            runtime.getSetting("DISCORD_API_TOKEN") ||
+            process.env[
+                `${runtime.character.name.toUpperCase()}_DISCORD_API_TOKEN`
+            ];
         this.client = new Client({
             intents: [
                 GatewayIntentBits.Guilds,

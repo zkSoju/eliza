@@ -39,9 +39,9 @@ export interface MessageOptions {
 
 export async function generateActionResponse(
     runtime: IAgentRuntime,
-    context: string,
     state: State,
     callback: HandlerCallback,
+    context: string,
     options: MessageOptions = {}
 ): Promise<boolean> {
     try {
@@ -61,8 +61,48 @@ export async function generateActionResponse(
             modelClass: ModelClass.SMALL,
         });
 
-        elizaLogger.info(response);
-        elizaLogger.info(JSON.stringify(options));
+        callback({
+            text: response,
+            content: {
+                success: options.success ?? !options.error,
+                ...(options.data || {}),
+            },
+        });
+
+        return !options.error;
+    } catch (error) {
+        callback({
+            text: "An error occurred while generating response",
+            content: { error: "Response generation failed" },
+        });
+        return false;
+    }
+}
+
+export async function generateDirectResponse(
+    runtime: IAgentRuntime,
+    state: State,
+    callback: HandlerCallback,
+    context: Record<string, unknown>,
+    template: string,
+    options: MessageOptions = {}
+): Promise<boolean> {
+    try {
+        elizaLogger.info("Generating direct response");
+
+        const composedContext = composeContext({
+            state: {
+                ...state,
+                context,
+            },
+            template,
+        });
+
+        const response = await generateText({
+            runtime,
+            context: composedContext,
+            modelClass: ModelClass.SMALL,
+        });
 
         callback({
             text: response,
