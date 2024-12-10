@@ -106,8 +106,6 @@ export async function generateDirectResponse(
             template,
         });
 
-        elizaLogger.info("Composed context:", JSON.stringify(composedContext));
-
         const response = await generateText({
             runtime,
             context: composedContext,

@@ -262,6 +262,11 @@ export class DiscordClient extends EventEmitter {
                     inReplyTo: stringToUuid(
                         `${reaction.message.id}-${this.runtime.agentId}`
                     ),
+                    roles: reaction.message.member?.roles.cache.map(role => ({
+                        id: role.id,
+                        name: role.name,
+                        color: role.color
+                    })) || [],
                 },
                 roomId,
                 createdAt: timestamp,
@@ -353,6 +358,11 @@ export class DiscordClient extends EventEmitter {
                     inReplyTo: stringToUuid(
                         reaction.message.id + "-" + this.runtime.agentId
                     ), // This is the ID of the original message
+                    roles: reaction.message.member?.roles.cache.map(role => ({
+                        id: role.id,
+                        name: role.name,
+                        color: role.color
+                    })) || [],
                 },
                 roomId,
                 createdAt: Date.now(),

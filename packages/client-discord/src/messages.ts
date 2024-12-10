@@ -159,6 +159,13 @@ export class MessageManager {
                 attachments: attachments,
                 source: "discord",
                 url: message.url,
+                user: message.author.id,
+                userName: message.author.username,
+                roles: message.member?.roles.cache.map(role => ({
+                    id: role.id,
+                    name: role.name,
+                    color: role.color
+                })) || [],
                 inReplyTo: message.reference?.messageId
                     ? stringToUuid(
                           message.reference.messageId +

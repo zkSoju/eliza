@@ -143,7 +143,7 @@ export class OmniscientProvider {
 
             const data = await response.json();
 
-            elizaLogger.info("Linear API response:", JSON.stringify(data));
+            // elizaLogger.info("Linear API response:", JSON.stringify(data));
 
             if (data.errors) {
                 elizaLogger.error(
@@ -279,20 +279,12 @@ export const omniscientProvider: Provider = {
                 (p) => p.state === "active"
             );
             const criticalIssues = data.issues.filter((i) => i.priority >= 2);
-
             return `Overview:
 
-🚀 Active Projects (${activeProjects.length}):
-${activeProjects.map((p) => `- ${p.name} (Progress: ${p.progress}%)`).join("\n")}
-
-⚠️ Critical Issues (${criticalIssues.length}):
-${criticalIssues.map((i) => `- ${i.title} (Priority: ${i.priority}, Team: ${i.team?.name || "No team"})`).join("\n")}
-
-👥 Teams (${data.teams.length}):
-${data.teams.map((t) => `- ${t.name} (${t.key})`).join("\n")}
-
-📋 All Issues (${data.issues.length}):
-${data.issues.map((i) => `- ${i.title} (Priority: ${i.priority}, Team: ${i.team?.name || "No team"})`).join("\n")}
+Active Projects: ${activeProjects.length}
+Critical Issues: ${criticalIssues.length}
+Teams: ${data.teams.length}
+Total Issues: ${data.issues.length}
 
 Last Updated: ${new Date(data.lastUpdated).toLocaleString()}`;
         } catch (error) {

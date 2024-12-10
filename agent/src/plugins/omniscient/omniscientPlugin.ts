@@ -1,4 +1,5 @@
 import { Plugin } from "@ai16z/eliza";
+import { contextSummaryAction } from "./actions/contextSummaryAction";
 import { projectSummaryAction } from "./actions/projectSummaryAction";
 import { summaryAction } from "./actions/summaryAction";
 import { projectEvaluator } from "./evaluators/projectEvaluator";
@@ -13,6 +14,7 @@ export const omniscientPlugin: Plugin = {
     actions: [
         summaryAction,
         projectSummaryAction,
+        contextSummaryAction,
         // priorityFilterAction,
         // contextSwitchAction,
         // focusMetricsAction,

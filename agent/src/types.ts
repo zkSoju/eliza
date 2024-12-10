@@ -1,3 +1,4 @@
+import { Content } from "@ai16z/eliza";
 import type { Token } from "@lifi/types";
 import type {
     Account,
@@ -205,4 +206,27 @@ export interface Milestone {
     description: string;
     timestamp: number;
     achieved: boolean;
+}
+
+interface DiscordRole {
+    id: string;
+    name: string;
+    color: number;
+}
+
+export interface DiscordContent extends Content {
+    /** Discord user ID */
+    user: string;
+
+    /** Discord username */
+    userName: string;
+
+    /** Array of Discord roles for the user */
+    roles?: DiscordRole[];
+
+    /** URL of the Discord message */
+    url?: string;
+
+    /** Source will always be "discord" */
+    source: "discord";
 }

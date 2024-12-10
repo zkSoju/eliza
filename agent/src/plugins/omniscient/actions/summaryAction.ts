@@ -8,35 +8,42 @@ import {
 import { generateDirectResponse } from "../../../utils/messageGenerator";
 import { OmniscientProvider } from "../providers/omniscientProvider";
 
-const summaryTemplate = `Given the following project data, provide a focused summary:
-
-Project Data:
-🚀 Active Projects:
-{{projects}}
-
-⚠️ Critical Issues:
-{{criticalIssues}}
-
-👥 Teams:
-{{teams}}
-
-📋 All Issues:
-{{issues}}
-
-Last Updated: {{lastUpdated}}
-
-Guidelines:
-- Highlight critical issues and their priorities
-- Focus on active project progress
-- Note team assignments and workload distribution
-- Identify any bottlenecks or risks
-- Keep response concise and actionable
-- Prioritize by impact and urgency`;
-
 export const summaryAction: Action = {
-    name: "SUMMARIZE_CONTEXT",
-    description: "Summarizes project context and priorities",
-    similes: ["SUMMARIZE", "GET_OVERVIEW", "CHECK_STATUS"],
+    name: "SUMMARIZE_STATUS",
+    description: "Provides high-level overview of projects, teams, and critical issues",
+    similes: ["STATUS", "OVERVIEW", "PROGRESS"],
+    examples: [
+        [
+            {
+                user: "{{user1}}",
+                content: {
+                    text: "What's our overall project status?",
+                    action: "SUMMARIZE_STATUS"
+                }
+            },
+            {
+                user: "{{agentName}}",
+                content: {
+                    text: "*studies the sacred patterns* Three projects in motion, two critical issues need attention..."
+                }
+            }
+        ],
+        [
+            {
+                user: "{{user1}}",
+                content: {
+                    text: "How are our teams doing?",
+                    action: "SUMMARIZE_STATUS"
+                }
+            },
+            {
+                user: "{{agentName}}",
+                content: {
+                    text: "*examines team crystals* Frontend team focused on auth, Backend tackling optimization..."
+                }
+            }
+        ]
+    ],
     validate: async (runtime: IAgentRuntime, message: Memory, state: State) => {
         return true;
     },
@@ -61,41 +68,24 @@ export const summaryAction: Action = {
             );
         }
 
-        const criticalIssues = data.issues.filter((i) => i.priority >= 2);
-
         return generateDirectResponse(
             runtime,
             state,
             callback,
             {
-                projects: data.projects,
-                criticalIssues,
-                teams: data.teams,
-                issues: data.issues,
-                lastUpdated: new Date(data.lastUpdated).toLocaleString(),
+                data
             },
-            summaryTemplate,
-            {
-                success: true,
-                data: { summary: data },
-            }
+            `Provide a high-level strategic overview:
+
+Current Data:
+{{data}}
+
+Guidelines:
+- Focus on overall project health and progress
+- Highlight team capacity and workload
+- Identify strategic priorities and blockers
+- Keep focus on big picture trends
+- Note any resource or timeline risks`
         );
-    },
-    examples: [
-        [
-            {
-                user: "{{user1}}",
-                content: {
-                    text: "What are our current priorities?",
-                },
-            },
-            {
-                user: "{{user2}}",
-                content: {
-                    text: "Based on the project data, here are the key priorities...",
-                    action: "SUMMARIZE_CONTEXT",
-                },
-            },
-        ],
-    ],
+    }
 };
