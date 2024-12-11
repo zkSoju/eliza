@@ -222,11 +222,26 @@ export interface DiscordContent extends Content {
     userName: string;
 
     /** Array of Discord roles for the user */
-    roles?: DiscordRole[];
+    roles?: Array<{
+        id: string;
+        name: string;
+        color: number;
+    }>;
 
     /** URL of the Discord message */
     url?: string;
 
     /** Source will always be "discord" */
     source: "discord";
+
+    channelInfo?: {
+        id: string;
+        name: string;
+        type: string;
+        parentId?: string;
+        parentName?: string;
+        categoryId?: string;
+        categoryName?: string;
+        isThread?: boolean;
+    };
 }
