@@ -104,9 +104,11 @@ function formatCategoryMessages(messages: CleanedMessage[]): string {
                 const category = (m as any).category
                     ? `[${(m as any).category}] `
                     : "";
-                return `- ${category}${m.text} (${m.channelPath}) ${m.url ? `[Link]` : ""}`;
+                const messageLink = m.url ? ` [[Link](${m.url})]` : "";
+                return `- ${category}${m.text} (${m.channelPath})${messageLink}`;
             }
-            return `- ${m.text} (${m.channelPath}) ${m.url ? `[Link]` : ""}`;
+            const messageLink = m.url ? ` [[Link](${m.url})]` : "";
+            return `- ${m.text} (${m.channelPath})${messageLink}`;
         })
         .join("\n");
 }
