@@ -65,19 +65,19 @@ function cleanMessageForSummary(memory: Memory): CleanedMessage {
     };
 }
 
-function groupMessagesByChannel(messages: Memory[]): GroupedMessages {
-    return messages.reduce((acc: GroupedMessages, message: Memory) => {
-        const channelId = message.roomId;
-        if (!acc[channelId]) {
-            acc[channelId] = {
-                channelName: `Channel-${channelId.slice(0, 8)}`,
-                messages: [],
-            };
-        }
-        acc[channelId].messages.push(message);
-        return acc;
-    }, {});
-}
+// function groupMessagesByChannel(messages: Memory[]): GroupedMessages {
+//     return messages.reduce((acc: GroupedMessages, message: Memory) => {
+//         const channelId = message.roomId;
+//         if (!acc[channelId]) {
+//             acc[channelId] = {
+//                 channelName: `Channel-${channelId.slice(0, 8)}`,
+//                 messages: [],
+//             };
+//         }
+//         acc[channelId].messages.push(message);
+//         return acc;
+//     }, {});
+// }
 
 function groupMessagesByCategory(messages: CleanedMessage[]): {
     [key: string]: CleanedMessage[];
@@ -131,6 +131,7 @@ Guidelines:
 - Group by category/channel only if there are multiple active discussions
 - Include message links for important items
 - Match summary length to amount of actual content
+- Use markdown to format the summary (Up to ## headers)
 
 Provide a clear, concise summary of recent activity.`;
 }
@@ -303,6 +304,7 @@ Guidelines:
 - Include message links for important items
 - Keep the summary brief but comprehensive
 - Highlight trends or patterns in discussions
+- Use markdown to format the summary (Up to ## headers)
 
 Provide a clear overview of the last 24 hours of activity.`;
 }
