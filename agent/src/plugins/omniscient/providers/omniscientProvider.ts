@@ -5,7 +5,7 @@ import {
     Provider,
     State,
 } from "@ai16z/eliza";
-
+import * as cron from "node-cron";
 interface Project {
     id: string;
     name: string;
@@ -269,6 +269,24 @@ export const omniscientProvider: Provider = {
         if (!runtime.getSetting("LINEAR_API_KEY")) {
             return null;
         }
+
+        cron.schedule("0 9 * * *", async () => {
+            try {
+                await runtime.processActions(
+                    {
+                        ...message,
+                        content: {
+                            action: "DAILY_SUMMARY",
+                            text: "What is the daily summary?",
+                        },
+                    }, // no trigger message needed
+                    [], // no response messages
+                    state // empty state
+                );
+            } catch (error) {
+                console.error("Failed to generate daily summary:", error);
+            }
+        });
 
         try {
             const provider = new OmniscientProvider(runtime);

@@ -1,11 +1,9 @@
 import {
     Action,
-    elizaLogger,
     HandlerCallback,
     IAgentRuntime,
     Memory,
     State,
-    UUID,
 } from "@ai16z/eliza";
 import { DiscordContent } from "../../../types";
 import { generateDirectResponse } from "../../../utils/messageGenerator";
@@ -27,15 +25,19 @@ interface CleanedMessage {
     replyTo?: string;
     url?: string;
     channelPath: string;
-    channelInfo?: DiscordContent['channelInfo'];
+    channelInfo?: DiscordContent["channelInfo"];
 }
 
 function getChannelPath(content: DiscordContent): string {
     if (!content.channelInfo) return "Unknown Channel";
 
     const parts = [];
-    if (content.channelInfo.categoryName) parts.push(content.channelInfo.categoryName);
-    if (content.channelInfo.parentName && content.channelInfo.parentName !== content.channelInfo.categoryName) {
+    if (content.channelInfo.categoryName)
+        parts.push(content.channelInfo.categoryName);
+    if (
+        content.channelInfo.parentName &&
+        content.channelInfo.parentName !== content.channelInfo.categoryName
+    ) {
         parts.push(content.channelInfo.parentName);
     }
     parts.push(content.channelInfo.name);
@@ -46,7 +48,7 @@ function getChannelPath(content: DiscordContent): string {
 
 function cleanMessageForSummary(memory: Memory): CleanedMessage {
     const content = memory.content as DiscordContent;
-    const roles = (content.roles || []).filter(r => r.name !== "@everyone");
+    const roles = (content.roles || []).filter((r) => r.name !== "@everyone");
 
     return {
         timestamp: new Date(memory.createdAt || Date.now()).toISOString(),
@@ -77,33 +79,43 @@ function groupMessagesByChannel(messages: Memory[]): GroupedMessages {
     }, {});
 }
 
-function groupMessagesByCategory(messages: CleanedMessage[]): { [key: string]: CleanedMessage[] } {
-    return messages.reduce((acc: { [key: string]: CleanedMessage[] }, message) => {
-        const categoryName = message.channelInfo?.categoryName || 'Uncategorized';
-        if (!acc[categoryName]) {
-            acc[categoryName] = [];
-        }
-        acc[categoryName].push(message);
-        return acc;
-    }, {});
+function groupMessagesByCategory(messages: CleanedMessage[]): {
+    [key: string]: CleanedMessage[];
+} {
+    return messages.reduce(
+        (acc: { [key: string]: CleanedMessage[] }, message) => {
+            const categoryName =
+                message.channelInfo?.categoryName || "Uncategorized";
+            if (!acc[categoryName]) {
+                acc[categoryName] = [];
+            }
+            acc[categoryName].push(message);
+            return acc;
+        },
+        {}
+    );
 }
 
 function formatCategoryMessages(messages: CleanedMessage[]): string {
-    return messages.map(m => {
-        if ('importance' in m) {
-            const importance = (m as any).importance;
-            const category = (m as any).category ? `[${(m as any).category}] ` : "";
-            return `- ${category}${m.text} (${m.channelPath}) ${m.url ? `[Link]` : ''}`;
-        }
-        return `- ${m.text} (${m.channelPath}) ${m.url ? `[Link]` : ''}`;
-    }).join('\n');
+    return messages
+        .map((m) => {
+            if ("importance" in m) {
+                const importance = (m as any).importance;
+                const category = (m as any).category
+                    ? `[${(m as any).category}] `
+                    : "";
+                return `- ${category}${m.text} (${m.channelPath}) ${m.url ? `[Link]` : ""}`;
+            }
+            return `- ${m.text} (${m.channelPath}) ${m.url ? `[Link]` : ""}`;
+        })
+        .join("\n");
 }
 
 function generateRoleSpecificTemplate(
     userRoles: Array<{ id: string; name: string }>
 ) {
     const roleNames = userRoles
-        .filter(r => r.name !== "@everyone")
+        .filter((r) => r.name !== "@everyone")
         .map((r) => r.name)
         .join(", ");
     return `Given the following context from various channels, provide a brief, focused summary for a team member with roles: ${roleNames || "General Member"}
@@ -125,7 +137,12 @@ export const contextSummaryAction: Action = {
     name: "SUMMARIZE_CONTEXT",
     description:
         "Summarizes recent context across channels, tailored to user's role",
-    similes: ["SUMMARIZE_ALL", "GET_OVERVIEW", "CHECK_UPDATES"],
+    similes: [
+        "SUMMARIZE_ALL",
+        "GET_OVERVIEW",
+        "CHECK_UPDATES",
+        "DAILY_SUMMARY",
+    ],
     validate: async (runtime: IAgentRuntime, message: Memory, state: State) => {
         return true;
     },
@@ -183,24 +200,32 @@ export const contextSummaryAction: Action = {
         _options: unknown,
         callback: HandlerCallback
     ) => {
-        // Get user's roles from the message, excluding @everyone
         const content = message.content as DiscordContent;
-        const userRoles = (content.roles || []).filter(r => r.name !== "@everyone");
+        const userRoles = (content.roles || []).filter(
+            (r) => r.name !== "@everyone"
+        );
 
-        // First, get important messages from agent's global memory
+        const DAILY_SUMMARY_CHANNEL = "1127679596477825037";
+
+        // Check if this is a daily summary
+        const isDaily = content.action === "DAILY_SUMMARY";
+        const lookbackHours = isDaily ? 24 : 4;
+        const lookbackTime = Date.now() - lookbackHours * 60 * 60 * 1000;
+
+        // Get important messages from agent's global memory
         const importantMessages = await runtime.messageManager.getMemories({
-            roomId: runtime.agentId, // Get from agent's global memory
+            roomId: runtime.agentId,
             count: 100,
             unique: true,
+            start: lookbackTime,
         });
 
-        elizaLogger.info("Important messages:", importantMessages);
-
-        // Then get recent messages from current channel for immediate context
+        // Get recent messages from current channel for immediate context
         const recentMessages = await runtime.messageManager.getMemories({
             roomId: message.roomId,
-            count: 50, // Reduced count since we're combining with important messages
+            count: 50,
             unique: false,
+            start: lookbackTime,
         });
 
         // Clean and process messages
@@ -209,7 +234,8 @@ export const contextSummaryAction: Action = {
             .map((msg) => ({
                 ...cleanMessageForSummary(msg),
                 importance: (msg.content.importance as any)?.importance || 0,
-                category: (msg.content.importance as any)?.category || "general_chat",
+                category:
+                    (msg.content.importance as any)?.category || "general_chat",
                 originalRoomId: msg.content.originalRoomId,
             }));
 
@@ -217,76 +243,37 @@ export const contextSummaryAction: Action = {
             .filter((msg) => msg.content.text?.trim())
             .map((msg) => cleanMessageForSummary(msg));
 
-        // Group messages by channel
-        const groupedMessages = groupMessagesByChannel([
-            ...recentMessages,
-            ...importantMessages.map((msg) => ({
-                ...msg,
-                roomId: (msg.content.originalRoomId || msg.roomId) as UUID,
-            })),
-        ]);
-
-        // Format channel summaries with importance indicators and usernames
-        const channelSummaries = Object.entries(groupedMessages)
-            .map(([channelId, data]) => {
-                const messages = data.messages
-                    .map((m) => {
-                        const content = m.content as DiscordContent;
-                        const importance = (m.content.importance as any)?.importance;
-                        const prefix = importance ? `[Priority: ${importance}] ` : "";
-                        const userName = content.userName || "Unknown User";
-                        const messageLink = content.url ? ` (${content.url})` : "";
-                        return `${prefix}@${userName}: ${content.text}${messageLink}`;
-                    })
-                    .join("\n");
-                const channelPath = getChannelPath(data.messages[0]?.content as DiscordContent);
-                return `# ${channelPath}\n${messages}`;
-            })
-            .join("\n\n");
-
-        // Format important messages with usernames and links
-        const formattedImportantMessages = cleanedImportantMessages
-            .map((m) => {
-                const category = m.category ? `[${m.category}] ` : "";
-                const messageLink = m.url ? ` (${m.url})` : "";
-                return `[Priority: ${m.importance}] ${category}@${m.userName} in ${m.channelPath}: ${m.text}${messageLink}`;
-            })
-            .join("\n");
-
-        // Format recent messages with usernames and links
-        const formattedRecentMessages = cleanedRecentMessages
-            .map((m) => {
-                const messageLink = m.url ? ` (${m.url})` : "";
-                return `@${m.userName} in ${m.channelPath}: ${m.text}${messageLink}`;
-            })
-            .join("\n");
-
-        elizaLogger.info("Channel summaries:", channelSummaries);
-        elizaLogger.info("Important messages:", formattedImportantMessages);
-        elizaLogger.info("Recent messages:", formattedRecentMessages);
-        elizaLogger.info("User roles:", userRoles);
-
         // Group and format messages by category
-        const importantByCategory = groupMessagesByCategory(cleanedImportantMessages);
+        const importantByCategory = groupMessagesByCategory(
+            cleanedImportantMessages
+        );
         const recentByCategory = groupMessagesByCategory(cleanedRecentMessages);
 
         // Combine and format all categories
         const allCategories = new Set([
             ...Object.keys(importantByCategory),
-            ...Object.keys(recentByCategory)
+            ...Object.keys(recentByCategory),
         ]);
 
-        const formattedCategories = Array.from(allCategories).map(category => {
-            const importantMsgs = importantByCategory[category] || [];
-            const recentMsgs = recentByCategory[category] || [];
+        const formattedCategories = Array.from(allCategories)
+            .map((category) => {
+                const importantMsgs = importantByCategory[category] || [];
+                const recentMsgs = recentByCategory[category] || [];
 
-            if (importantMsgs.length === 0 && recentMsgs.length === 0) return '';
+                if (importantMsgs.length === 0 && recentMsgs.length === 0)
+                    return "";
 
-            return `## ${category}
-${importantMsgs.length > 0 ? 'Important Updates:\n' + formatCategoryMessages(importantMsgs) + '\n' : ''}${recentMsgs.length > 0 ? 'Recent Messages:\n' + formatCategoryMessages(recentMsgs) : ''}`;
-        }).filter(Boolean).join('\n\n');
+                return `## ${category}
+${importantMsgs.length > 0 ? "Important Updates:\n" + formatCategoryMessages(importantMsgs) + "\n" : ""}${recentMsgs.length > 0 ? "Recent Messages:\n" + formatCategoryMessages(recentMsgs) : ""}`;
+            })
+            .filter(Boolean)
+            .join("\n\n");
 
-        // Generate the summary
+        // Use appropriate template based on whether this is a daily summary
+        const template = isDaily
+            ? generateDailySummaryTemplate()
+            : generateRoleSpecificTemplate(userRoles);
+
         return generateDirectResponse(
             runtime,
             state,
@@ -294,8 +281,26 @@ ${importantMsgs.length > 0 ? 'Important Updates:\n' + formatCategoryMessages(imp
             {
                 categoryMessages: formattedCategories,
                 userRoles: userRoles.map((r) => r.name).join(", "),
+                timeframe: `${lookbackHours} hours`,
             },
-            generateRoleSpecificTemplate(userRoles)
+            template,
+            isDaily ? { targetChannelId: DAILY_SUMMARY_CHANNEL } : {}
         );
     },
 };
+
+function generateDailySummaryTemplate(): string {
+    return `Provide a concise daily summary of organizational activity.
+
+Recent Activity by Category:
+{{categoryMessages}}
+
+Guidelines:
+- Focus on key decisions, updates, and action items
+- Group by category to show activity across the organization
+- Include message links for important items
+- Keep the summary brief but comprehensive
+- Highlight trends or patterns in discussions
+
+Provide a clear overview of the last 24 hours of activity.`;
+}

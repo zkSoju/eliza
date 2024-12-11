@@ -296,7 +296,8 @@ export class MessageManager {
 
                 const callback: HandlerCallback = async (
                     content: Content,
-                    files: any[]
+                    files: any[],
+                    options?: { targetChannelId?: string }
                 ) => {
                     try {
                         if (message.id && !content.inReplyTo) {
@@ -304,8 +305,14 @@ export class MessageManager {
                                 message.id + "-" + this.runtime.agentId
                             );
                         }
+
+                        // Get target channel
+                        const targetChannel = options?.targetChannelId
+                            ? await this.client.channels.fetch(options.targetChannelId) as TextChannel
+                            : message.channel as TextChannel;
+
                         const messages = await sendMessageInChunks(
-                            message.channel as TextChannel,
+                            targetChannel,
                             content.text,
                             message.id,
                             files

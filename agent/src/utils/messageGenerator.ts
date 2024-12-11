@@ -1,6 +1,8 @@
 import {
+    Content,
     HandlerCallback,
     IAgentRuntime,
+    Memory,
     ModelClass,
     State,
     composeContext,
@@ -35,6 +37,7 @@ export interface MessageOptions {
     success?: boolean;
     error?: string;
     data?: Record<string, unknown>;
+    targetChannelId?: string;
 }
 
 export async function generateActionResponse(
@@ -82,7 +85,11 @@ export async function generateActionResponse(
 export async function generateDirectResponse(
     runtime: IAgentRuntime,
     state: State,
-    callback: HandlerCallback,
+    callback: (
+        content: Content,
+        files?: any[],
+        options?: { targetChannelId?: string }
+    ) => Promise<Memory[]>,
     context: Record<string, unknown>,
     template: string,
     options: MessageOptions = {}
@@ -112,7 +119,15 @@ export async function generateDirectResponse(
             modelClass: ModelClass.SMALL,
         });
 
-        callback({
+        // If targetChannelId is provided, wrap the callback
+        const wrappedCallback = options.targetChannelId
+            ? (content: any, files?: any[]) =>
+                  callback(content, files, {
+                      targetChannelId: options.targetChannelId,
+                  })
+            : callback;
+
+        wrappedCallback({
             text: response,
             content: {
                 success: options.success ?? !options.error,

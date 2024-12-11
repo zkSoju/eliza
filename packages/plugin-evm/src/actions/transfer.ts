@@ -1,8 +1,8 @@
-import { ByteArray, parseEther, type Hex } from "viem";
-import { WalletProvider } from "../providers/wallet";
-import type { Transaction, TransferParams } from "../types";
-import { transferTemplate } from "../templates";
 import type { IAgentRuntime, Memory, State } from "@ai16z/eliza";
+import { ByteArray, parseEther, type Hex } from "viem";
+import { transferTemplate } from "../templates";
+import type { Transaction, TransferParams } from "../types";
+import { WalletProvider } from "./wallet";
 
 export { transferTemplate };
 export class TransferAction {

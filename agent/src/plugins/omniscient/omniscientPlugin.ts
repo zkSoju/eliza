@@ -17,11 +17,7 @@ export const omniscientPlugin: Plugin = {
         summaryAction,
         projectSummaryAction,
         contextSummaryAction,
-
-        // priorityFilterAction,
-        // contextSwitchAction,
-        // focusMetricsAction,
-    ],
+    ]
 };
 
 export default omniscientPlugin;
