@@ -7,52 +7,52 @@ import {
     State,
     composeContext,
     generateText,
+    Content,
 } from "@ai16z/eliza";
 import { generateDirectResponse } from "../../../utils/messageGenerator";
 import { OmniscientProvider } from "../providers/omniscientProvider";
+import { RoleContent } from "../evaluators/roleEvaluator";
 
-interface UserRole {
-    role:
-        | "engineering_lead"
-        | "product_manager"
-        | "qa"
-        | "stakeholder"
-        | "engineer";
-    focus: string[];
+interface CleanedMessage {
+    id: string;
+    timestamp: string;
+    text: string;
+    user: string;
+    userName: string;
+    roles: string[];
+    room: string;
+    action?: string;
+    replyTo?: string;
 }
 
-const ROLE_CONTEXTS: Record<UserRole["role"], UserRole> = {
-    engineering_lead: {
-        role: "engineering_lead",
-        focus: [
-            "technical_debt",
-            "architecture",
-            "team_capacity",
-            "dependencies",
-        ],
-    },
-    product_manager: {
-        role: "product_manager",
-        focus: ["feature_requests", "timelines", "priorities", "roadmap"],
-    },
-    qa: {
-        role: "qa",
-        focus: ["test_coverage", "bugs", "releases", "stability"],
-    },
-    stakeholder: {
-        role: "stakeholder",
-        focus: ["progress", "metrics", "risks", "outcomes"],
-    },
-    engineer: {
-        role: "engineer",
-        focus: ["tasks", "blockers", "code_reviews", "specifications"],
-    },
-};
+interface MessageContent extends Content {
+    user?: string;
+    userName?: string;
+    roles?: Array<{ name: string }>;
+}
+
+function cleanMessageForSummary(memory: Memory): CleanedMessage {
+    const content = memory.content as MessageContent;
+    const roles = content.roles || [];
+
+    return {
+        id: memory.id,
+        timestamp: new Date(memory.createdAt || Date.now()).toISOString(),
+        text: content.text,
+        user: content.user || memory.userId,
+        userName: content.userName || 'unknown',
+        roles: roles.map((r) => r.name),
+        room: memory.roomId,
+        // Only include if present
+        ...(content.action && { action: content.action }),
+        ...(content.inReplyTo && { replyTo: content.inReplyTo }),
+    };
+}
 
 const priorityTemplate = `Given the user's role and project data, provide a focused priority list:
 
-Role Context:
-{{roleContext}}
+Role Information:
+{{roleInfo}}
 
 Recent Messages:
 {{recentMessages}}
@@ -61,7 +61,7 @@ Project Data:
 {{projectData}}
 
 Guidelines:
-- Focus on {{role}}'s key areas: {{focus}}
+- Focus on the user's primary role and focus areas
 - Prioritize based on impact and urgency
 - Include relevant metrics and progress
 - Highlight dependencies and blockers
@@ -82,6 +82,35 @@ export const priorityFilterAction: Action = {
         _options: unknown,
         callback: HandlerCallback
     ) => {
+        // Get cached role information
+        const cacheKey = `${runtime.character.name}/user-role/${message.userId}`;
+        const roleInfo = await runtime.cacheManager?.get<RoleContent & { guidance: any }>(cacheKey);
+
+        if (!roleInfo) {
+            return generateDirectResponse(
+                runtime,
+                state,
+                callback,
+                {},
+                "Unable to determine user role. Please try again in a moment.",
+                {
+                    error: "Role information not available",
+                }
+            );
+        }
+
+        // Fetch recent messages
+        const recentMessages = await runtime.messageManager.getMemories({
+            roomId: message.roomId,
+            count: 100, // Fetch last 100 messages
+            unique: false,
+        });
+
+        // Clean and process messages
+        const cleanedMessages = recentMessages.map((msg) =>
+            cleanMessageForSummary(msg)
+        );
+
         const provider = new OmniscientProvider(runtime);
         const data = await provider.getData();
 
@@ -98,16 +127,16 @@ export const priorityFilterAction: Action = {
             );
         }
 
-        // Get user's role from Discord or default to engineer
-        const userRole = runtime.getSetting("DISCORD_ROLE") || "engineer";
-        const roleContext = ROLE_CONTEXTS[userRole as UserRole["role"]];
-
         const priorityContext = composeContext({
             state: {
                 ...state,
-                role: roleContext.role,
-                focus: roleContext.focus.join(", "),
-                roleContext: JSON.stringify(roleContext, null, 2),
+                roleInfo: JSON.stringify({
+                    primaryRole: roleInfo.primaryRole,
+                    focusAreas: roleInfo.focusAreas,
+                    responsibilities: roleInfo.responsibilities,
+                    accessLevel: roleInfo.accessLevel
+                }, null, 2),
+                recentMessages: cleanedMessages.map(m => m.text).join("\n"),
                 projectData: JSON.stringify(
                     {
                         criticalIssues: data.issues.filter(
@@ -145,11 +174,14 @@ export const priorityFilterAction: Action = {
             {
                 success: true,
                 data: {
-                    role: roleContext.role,
+                    role: roleInfo.primaryRole,
+                    focusAreas: roleInfo.focusAreas,
+                    responsibilities: roleInfo.responsibilities,
                     lastUpdated: data.lastUpdated,
+                    priorities
                 },
             },
-            priorityTemplate
+            priorities
         );
     },
     examples: [

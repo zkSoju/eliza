@@ -5,6 +5,7 @@ import {
     IAgentRuntime,
     Memory,
     State,
+    UUID,
 } from "@ai16z/eliza";
 import { DiscordContent } from "../../../types";
 import { generateDirectResponse } from "../../../utils/messageGenerator";
@@ -17,13 +18,11 @@ interface GroupedMessages {
 }
 
 interface CleanedMessage {
-    id: string;
     timestamp: string;
     text: string;
     user: string;
     userName: string;
     roles: string[];
-    room: string;
     action?: string;
     replyTo?: string;
 }
@@ -33,13 +32,11 @@ function cleanMessageForSummary(memory: Memory): CleanedMessage {
     const roles = content.roles || [];
 
     return {
-        id: memory.id,
         timestamp: new Date(memory.createdAt || Date.now()).toISOString(),
         text: content.text,
         user: content.user || memory.userId,
         userName: content.userName,
         roles: roles.map((r) => r.name),
-        room: memory.roomId,
         // Only include if present
         ...(content.action && { action: content.action }),
         ...(content.inReplyTo && { replyTo: content.inReplyTo }),
@@ -148,43 +145,79 @@ export const contextSummaryAction: Action = {
         const content = message.content as DiscordContent;
         const userRoles = content.roles || [];
 
-        // Fetch recent messages across channels
+        // First, get important messages from agent's global memory
+        const importantMessages = await runtime.messageManager.getMemories({
+            roomId: runtime.agentId, // Get from agent's global memory
+            count: 100,
+            unique: true,
+        });
+
+        // Then get recent messages from current channel for immediate context
         const recentMessages = await runtime.messageManager.getMemories({
             roomId: message.roomId,
-            count: 1000,
+            count: 50, // Reduced count since we're combining with important messages
             unique: false,
         });
 
         // Clean and process messages
-        const cleanedMessages = recentMessages.map((msg) =>
-            cleanMessageForSummary(msg)
-        );
+        const cleanedImportantMessages = importantMessages
+            .filter((msg) => msg.content.text?.trim())
+            .map((msg) => ({
+                ...cleanMessageForSummary(msg),
+                importance: (msg.content.importance as any)?.importance || 0,
+                category:
+                    (msg.content.importance as any)?.category || "general_chat",
+                originalRoomId: msg.content.originalRoomId,
+            }));
+
+        const cleanedRecentMessages = recentMessages
+            .filter((msg) => msg.content.text?.trim())
+            .map((msg) => cleanMessageForSummary(msg));
 
         // Group messages by channel
-        const groupedMessages = groupMessagesByChannel(recentMessages);
+        const groupedMessages = groupMessagesByChannel([
+            ...recentMessages,
+            ...importantMessages.map((msg) => ({
+                ...msg,
+                roomId: (msg.content.originalRoomId || msg.roomId) as UUID,
+            })),
+        ]);
 
-        // Format channel summaries
+        // Format channel summaries with importance indicators
         const channelSummaries = Object.entries(groupedMessages)
             .map(([channelId, data]) => {
                 const messages = data.messages
-                    .map((m) => `${(m.content as DiscordContent).text}`)
+                    .map((m) => {
+                        const importance = (m.content.importance as any)
+                            ?.importance;
+                        const prefix = importance
+                            ? `[Priority: ${importance}] `
+                            : "";
+                        return `${prefix}${(m.content as DiscordContent).text}`;
+                    })
                     .join("\n");
                 return `# ${data.channelName}\n${messages}`;
             })
             .join("\n\n");
 
         elizaLogger.info("Channel summaries:", channelSummaries);
-        elizaLogger.info("Cleaned messages:", cleanedMessages);
+        elizaLogger.info("Important messages:", cleanedImportantMessages);
+        elizaLogger.info("Recent messages:", cleanedRecentMessages);
         elizaLogger.info("User roles:", userRoles);
 
-        // Generate the summary
+        // Generate the summary with emphasis on important messages
         return generateDirectResponse(
             runtime,
             state,
             callback,
             {
                 channels: channelSummaries,
-                messages: cleanedMessages.map((m) => m.text).join("\n"),
+                messages: [
+                    ...cleanedImportantMessages.map(
+                        (m) => `[Priority: ${m.importance}] ${m.text}`
+                    ),
+                    ...cleanedRecentMessages.map((m) => m.text),
+                ].join("\n"),
                 userRoles: userRoles.map((r) => r.name).join(", "),
             },
             generateRoleSpecificTemplate(userRoles)
