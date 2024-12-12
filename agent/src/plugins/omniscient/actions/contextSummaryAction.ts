@@ -4,6 +4,7 @@ import {
     IAgentRuntime,
     Memory,
     State,
+    stringToUuid,
 } from "@ai16z/eliza";
 import { DiscordContent } from "../../../types";
 import { generateDirectResponse } from "../../../utils/messageGenerator";
@@ -217,7 +218,7 @@ export const contextSummaryAction: Action = {
 
         // Get important messages from agent's global memory
         const importantMessages = await runtime.messageManager.getMemories({
-            roomId: runtime.agentId,
+            roomId: stringToUuid("important-messages-" + runtime.agentId),
             count: 100,
             unique: true,
             start: lookbackTime,

@@ -6,6 +6,7 @@ import {
     State,
     composeContext,
     generateObjectV2,
+    stringToUuid,
 } from "@ai16z/eliza";
 import { z } from "zod";
 
@@ -253,7 +254,7 @@ export const importanceEvaluator: Evaluator = {
         try {
             // Get recent messages for context
             const recentMessages = await runtime.messageManager.getMemories({
-                roomId: message.roomId,
+                roomId: stringToUuid("important-messages-" + runtime.agentId),
                 count: 10,
                 unique: false,
             });
@@ -284,7 +285,9 @@ export const importanceEvaluator: Evaluator = {
                     id: message.id,
                     userId: message.userId,
                     agentId: runtime.agentId,
-                    roomId: runtime.agentId, // Store in agent's global memory
+                    roomId: stringToUuid(
+                        "important-messages-" + runtime.agentId
+                    ), // Store in agent's global memory
                     content: {
                         text: message.content.text,
                         source: message.content.source,
@@ -296,7 +299,7 @@ export const importanceEvaluator: Evaluator = {
                     createdAt: message.createdAt,
                 };
 
-                await runtime.messageManager.createMemory(globalMemory, true);
+                await runtime.messageManager.createMemory(globalMemory);
 
                 // Cache the importance analysis
                 const cacheKey = `${runtime.character.name}/message-importance/${message.id}`;

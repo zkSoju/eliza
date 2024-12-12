@@ -271,6 +271,8 @@ export const omniscientProvider: Provider = {
         }
 
         cron.schedule("0 9 * * *", async () => {
+            elizaLogger.info("Running daily summary");
+
             try {
                 await runtime.processActions(
                     {
