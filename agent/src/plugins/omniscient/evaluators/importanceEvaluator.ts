@@ -252,6 +252,11 @@ export const importanceEvaluator: Evaluator = {
         state?: State
     ): Promise<boolean> => {
         try {
+            // If message is the agent's own message, skip
+            if (message.userId === runtime.agentId) {
+                return true;
+            }
+
             // Get recent messages for context
             const recentMessages = await runtime.messageManager.getMemories({
                 roomId: message.roomId,
