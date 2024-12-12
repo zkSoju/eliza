@@ -275,14 +275,16 @@ export const omniscientProvider: Provider = {
 
             try {
                 await runtime.processActions(
-                    {
-                        ...message,
-                        content: {
-                            action: "DAILY_SUMMARY",
-                            text: "What is the daily summary?",
+                    message,
+                    [
+                        {
+                            ...message,
+                            content: {
+                                action: "DAILY_SUMMARY",
+                                text: "What is the daily summary?",
+                            },
                         },
-                    }, // no trigger message needed
-                    [], // no response messages
+                    ], // no response messages
                     state // empty state
                 );
             } catch (error) {
