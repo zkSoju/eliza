@@ -1,7 +1,10 @@
-import { composeContext } from "@ai16z/eliza";
-import { generateMessageResponse, generateShouldRespond } from "@ai16z/eliza";
 import {
+    composeContext,
     Content,
+    elizaLogger,
+    generateMessageResponse,
+    generateShouldRespond,
+    getEmbeddingZeroVector,
     HandlerCallback,
     IAgentRuntime,
     IBrowserService,
@@ -12,23 +15,22 @@ import {
     ModelClass,
     ServiceType,
     State,
+    stringToUuid,
     UUID,
 } from "@ai16z/eliza";
-import { stringToUuid, getEmbeddingZeroVector } from "@ai16z/eliza";
 import {
     ChannelType,
     Client,
     Message as DiscordMessage,
     TextChannel,
 } from "discord.js";
-import { elizaLogger } from "@ai16z/eliza";
 import { AttachmentManager } from "./attachments.ts";
-import { VoiceManager } from "./voice.ts";
 import {
-    discordShouldRespondTemplate,
     discordMessageHandlerTemplate,
+    discordShouldRespondTemplate,
 } from "./templates.ts";
-import { sendMessageInChunks, canSendMessage } from "./utils.ts";
+import { canSendMessage, sendMessageInChunks } from "./utils.ts";
+import { VoiceManager } from "./voice.ts";
 
 export type InterestChannels = {
     [key: string]: {
@@ -36,6 +38,13 @@ export type InterestChannels = {
         messages: { userId: UUID; userName: string; content: Content }[];
     };
 };
+
+interface DiscordClientConfig {
+    shouldIgnoreBotMessages?: boolean;
+    shouldIgnoreDirectMessages?: boolean;
+    allowedChannels?: string[];
+    allowedRoles?: string[];
+}
 
 export class MessageManager {
     private client: Client;
@@ -60,6 +69,36 @@ export class MessageManager {
                 this.client.user?.id /* || message.author?.bot*/
         )
             return;
+
+        const config = this.runtime.character.clientConfig
+            ?.discord as DiscordClientConfig;
+
+        // Check if message is in allowed channels
+        if (config?.allowedChannels?.length) {
+            const channelId = message.channel.id;
+
+            if (!config.allowedChannels.includes(channelId)) {
+                elizaLogger.debug(
+                    `Ignoring message from non-allowed channel ${channelId}`
+                );
+                return;
+            }
+        }
+
+        // Check if author has allowed roles (for guild messages)
+        if (config?.allowedRoles?.length && message.guild) {
+            const member = message.guild.members.cache.get(message.author.id);
+            const hasAllowedRole = member?.roles.cache.some((role) =>
+                config.allowedRoles?.includes(role.id)
+            );
+
+            if (!hasAllowedRole) {
+                elizaLogger.debug(
+                    `Ignoring message from user without allowed roles`
+                );
+                return;
+            }
+        }
 
         if (
             this.runtime.character.clientConfig?.discord
@@ -120,6 +159,14 @@ export class MessageManager {
                 attachments: attachments,
                 source: "discord",
                 url: message.url,
+                user: message.author.id,
+                userName: message.author.username,
+                roles:
+                    message.member?.roles.cache.map((role) => ({
+                        id: role.id,
+                        name: role.name,
+                        color: role.color,
+                    })) || [],
                 inReplyTo: message.reference?.messageId
                     ? stringToUuid(
                           message.reference.messageId +
@@ -127,6 +174,49 @@ export class MessageManager {
                               this.runtime.agentId
                       )
                     : undefined,
+                channelInfo: {
+                    id: message.channel.id,
+                    name:
+                        "name" in message.channel ? message.channel.name : "DM",
+                    type: message.channel.type,
+                    ...(message.channel.type !== ChannelType.DM &&
+                        message.guild && {
+                            isThread:
+                                "isThread" in message.channel
+                                    ? message.channel.isThread()
+                                    : false,
+                            // For threads, parent is the channel. For channels, parent is the category
+                            parentId:
+                                (message.channel as TextChannel).parentId ||
+                                undefined,
+                            parentName:
+                                (message.channel as TextChannel).parent?.name ||
+                                undefined,
+                            // Get category info from guild channels cache
+                            categoryId:
+                                message.guild.channels.cache.find(
+                                    (c) =>
+                                        c.type === ChannelType.GuildCategory &&
+                                        (c.id ===
+                                            (message.channel as TextChannel)
+                                                .parentId ||
+                                            c.id ===
+                                                (message.channel as TextChannel)
+                                                    .parent?.parentId)
+                                )?.id || undefined,
+                            categoryName:
+                                message.guild.channels.cache.find(
+                                    (c) =>
+                                        c.type === ChannelType.GuildCategory &&
+                                        (c.id ===
+                                            (message.channel as TextChannel)
+                                                .parentId ||
+                                            c.id ===
+                                                (message.channel as TextChannel)
+                                                    .parent?.parentId)
+                                )?.name || undefined,
+                        }),
+                },
             };
 
             const userMessage = {
@@ -227,7 +317,8 @@ export class MessageManager {
 
                 const callback: HandlerCallback = async (
                     content: Content,
-                    files: any[]
+                    files: any[],
+                    options?: { targetChannelId?: string }
                 ) => {
                     try {
                         if (message.id && !content.inReplyTo) {
@@ -235,8 +326,16 @@ export class MessageManager {
                                 message.id + "-" + this.runtime.agentId
                             );
                         }
+
+                        // Get target channel
+                        const targetChannel = options?.targetChannelId
+                            ? ((await this.client.channels.fetch(
+                                  options.targetChannelId
+                              )) as TextChannel)
+                            : (message.channel as TextChannel);
+
                         const messages = await sendMessageInChunks(
-                            message.channel as TextChannel,
+                            targetChannel,
                             content.text,
                             message.id,
                             files

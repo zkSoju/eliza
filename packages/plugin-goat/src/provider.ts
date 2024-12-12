@@ -20,7 +20,9 @@ export const chain = berachainTestnetBartio;
  * @returns Wallet client
  */
 export async function getWalletClient(runtime: IAgentRuntime) {
-    const privateKey = runtime.getSetting("EVM_PRIVATE_KEY");
+    const privateKey = runtime.getSetting(
+        `${runtime.character.name.toUpperCase()}_EVM_PRIVATE_KEY`
+    );
     if (!privateKey) throw new Error("EVM_PRIVATE_KEY not configured");
 
     const provider = runtime.getSetting("EVM_PROVIDER_URL");
