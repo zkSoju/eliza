@@ -176,25 +176,46 @@ export class MessageManager {
                     : undefined,
                 channelInfo: {
                     id: message.channel.id,
-                    name: 'name' in message.channel ? message.channel.name : 'DM',
+                    name:
+                        "name" in message.channel ? message.channel.name : "DM",
                     type: message.channel.type,
-                    ...(message.channel.type !== ChannelType.DM && message.guild && {
-                        isThread: 'isThread' in message.channel ? message.channel.isThread() : false,
-                        // For threads, parent is the channel. For channels, parent is the category
-                        parentId: (message.channel as TextChannel).parentId || undefined,
-                        parentName: (message.channel as TextChannel).parent?.name || undefined,
-                        // Get category info from guild channels cache
-                        categoryId: message.guild.channels.cache.find(
-                            c => c.type === ChannelType.GuildCategory &&
-                            (c.id === (message.channel as TextChannel).parentId ||
-                             c.id === (message.channel as TextChannel).parent?.parentId)
-                        )?.id || undefined,
-                        categoryName: message.guild.channels.cache.find(
-                            c => c.type === ChannelType.GuildCategory &&
-                            (c.id === (message.channel as TextChannel).parentId ||
-                             c.id === (message.channel as TextChannel).parent?.parentId)
-                        )?.name || undefined
-                    })
+                    ...(message.channel.type !== ChannelType.DM &&
+                        message.guild && {
+                            isThread:
+                                "isThread" in message.channel
+                                    ? message.channel.isThread()
+                                    : false,
+                            // For threads, parent is the channel. For channels, parent is the category
+                            parentId:
+                                (message.channel as TextChannel).parentId ||
+                                undefined,
+                            parentName:
+                                (message.channel as TextChannel).parent?.name ||
+                                undefined,
+                            // Get category info from guild channels cache
+                            categoryId:
+                                message.guild.channels.cache.find(
+                                    (c) =>
+                                        c.type === ChannelType.GuildCategory &&
+                                        (c.id ===
+                                            (message.channel as TextChannel)
+                                                .parentId ||
+                                            c.id ===
+                                                (message.channel as TextChannel)
+                                                    .parent?.parentId)
+                                )?.id || undefined,
+                            categoryName:
+                                message.guild.channels.cache.find(
+                                    (c) =>
+                                        c.type === ChannelType.GuildCategory &&
+                                        (c.id ===
+                                            (message.channel as TextChannel)
+                                                .parentId ||
+                                            c.id ===
+                                                (message.channel as TextChannel)
+                                                    .parent?.parentId)
+                                )?.name || undefined,
+                        }),
                 },
             };
 
@@ -308,8 +329,10 @@ export class MessageManager {
 
                         // Get target channel
                         const targetChannel = options?.targetChannelId
-                            ? await this.client.channels.fetch(options.targetChannelId) as TextChannel
-                            : message.channel as TextChannel;
+                            ? ((await this.client.channels.fetch(
+                                  options.targetChannelId
+                              )) as TextChannel)
+                            : (message.channel as TextChannel);
 
                         const messages = await sendMessageInChunks(
                             targetChannel,

@@ -83,6 +83,12 @@ async function sendToken(
         }
     }
 
+    elizaLogger.info("Sending token", {
+        token: tokenData.symbol,
+        amount: amount,
+        to: to,
+    });
+
     let hash: Hash;
 
     if (token.toUpperCase() === "BERA") {
