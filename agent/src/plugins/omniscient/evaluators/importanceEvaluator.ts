@@ -254,7 +254,7 @@ export const importanceEvaluator: Evaluator = {
         try {
             // Get recent messages for context
             const recentMessages = await runtime.messageManager.getMemories({
-                roomId: stringToUuid("important-messages-" + runtime.agentId),
+                roomId: message.roomId,
                 count: 10,
                 unique: false,
             });
