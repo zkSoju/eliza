@@ -497,7 +497,7 @@ async function startAgent(character: Character, directClient) {
 
         // Set up cron jobs for Discord clients
         clients.forEach((client) => {
-            if (client instanceof DiscordClient) {
+            if (client instanceof DiscordClient && character.name === "Sage") {
                 const cronSchedule =
                     process.env.NODE_ENV === "development"
                         ? "*/1 * * * *" // Every minute in dev

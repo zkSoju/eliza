@@ -2,7 +2,7 @@
     "name": "Pokakuma",
     "plugins": [],
     "clients": ["discord"],
-    "modelProvider": "openai",
+    "modelProvider": "anthropic",
     "settings": {
         "voice": {
             "model": "en_US-hfc_male-medium"
