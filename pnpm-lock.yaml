@@ -102,6 +102,9 @@ importers:
       '@ai16z/adapter-sqlite':
         specifier: workspace:*
         version: link:../packages/adapter-sqlite
+      '@ai16z/adapter-supabase':
+        specifier: workspace:*
+        version: link:../packages/adapter-supabase
       '@ai16z/client-auto':
         specifier: workspace:*
         version: link:../packages/client-auto
@@ -184,6 +187,9 @@ importers:
         specifier: 17.7.2
         version: 17.7.2
     devDependencies:
+      '@types/node-cron':
+        specifier: ^3.0.11
+        version: 3.0.11
       ts-node:
         specifier: 10.9.2
         version: 10.9.2(@swc/core@1.10.1(@swc/helpers@0.5.15))(@types/node@22.8.4)(typescript@5.6.3)
@@ -507,6 +513,9 @@ importers:
       '@discordjs/voice':
         specifier: 0.17.0
         version: 0.17.0(@discordjs/opus@https://codeload.github.com/discordjs/opus/tar.gz/31da49d8d2cc6c5a2ab1bfd332033ff7d5f9fb02(encoding@0.1.13))(bufferutil@4.0.8)(ffmpeg-static@5.2.0)(utf-8-validate@5.0.10)
+      cron:
+        specifier: ^3.3.1
+        version: 3.3.1
       discord.js:
         specifier: 14.16.3
         version: 14.16.3(bufferutil@4.0.8)(utf-8-validate@5.0.10)
@@ -6446,6 +6455,9 @@ packages:
   '@types/keyv@3.1.4':
     resolution: {integrity: sha512-BQ5aZNSCpj7D6K2ksrRCTmKRLEpnPvWDiLPfoGyhZ++8YtiK9d/3DBKPJgry359X/P1PfruyYwvnvwFjuEiEIg==}
 
+  '@types/luxon@3.4.2':
+    resolution: {integrity: sha512-TifLZlFudklWlMBfhubvgqTXRzLDI5pCbGa4P8a3wPyUQSW+1xQ5eDsreP9DWHX3tjq1ke96uYG/nwundroWcA==}
+
   '@types/mdast@4.0.4':
     resolution: {integrity: sha512-kGaNbPh1k7AFzgpud/gMdvIm5xuECykRR+JnWKQno9TAXVa6WIVCGTPvYGekIDL4uwCZQSYbUxNBSb1aUo79oA==}
 
@@ -6469,6 +6481,9 @@ packages:
 
   '@types/ms@0.7.34':
     resolution: {integrity: sha512-nG96G3Wp6acyAgJqGasjODb+acrI7KltPiRxzHPXnP3NgI28bpQDRv53olbqGXbfcgF5aiiHmO3xpwEpS5Ld9g==}
+
+  '@types/node-cron@3.0.11':
+    resolution: {integrity: sha512-0ikrnug3/IyneSHqCBeslAhlK2aBfYek1fGo4bP4QnZPmiqSGRK+Oy7ZMisLWkesffJvQ1cqAcBnJC+8+nxIAg==}
 
   '@types/node-fetch@2.6.12':
     resolution: {integrity: sha512-8nneRWKCg3rMtF69nLQJnOYUcbafYeFSjqkw3jCRLsqkWFlHaoQrr5mXmofFGOx3DKn7UfmBMyov8ySvLRVldA==}
@@ -8355,6 +8370,9 @@ packages:
 
   create-require@1.1.1:
     resolution: {integrity: sha512-dcKFX3jn0MpIaXjisoRvexIJVEKzaq7z2rZKxf+MSr9TkdmHmsU4m2lcLojrj/FHl8mk5VxMmYA+ftRkP/3oKQ==}
+
+  cron@3.3.1:
+    resolution: {integrity: sha512-KpvuzJEbeTMTfLsXhUuDfsFYr8s5roUlLKb4fa68GszWrA4783C7q6m9yj4vyc6neyD/V9e0YiADSX2c+yRDXg==}
 
   croner@4.1.97:
     resolution: {integrity: sha512-/f6gpQuxDaqXu+1kwQYSckUglPaOrHdbIlBAu0YuW8/Cdb45XwXYNUBXg3r/9Mo6n540Kn/smKcZWko5x99KrQ==}
@@ -11624,6 +11642,10 @@ packages:
 
   lunr@2.3.9:
     resolution: {integrity: sha512-zTU3DaZaF3Rt9rhN3uBMGQD3dD2/vFQqnvZCDv4dl5iOzq2IZQqTxu90r4E5J+nP70J3ilqVCrbho2eWaeW8Ow==}
+
+  luxon@3.5.0:
+    resolution: {integrity: sha512-rh+Zjr6DNfUYR3bPwJEnuwDdqMbxZW7LOQfUN4B54+Cl+0o5zaU9RJ6bcidfDtC1cWCZXQ+nvX8bf6bAji37QQ==}
+    engines: {node: '>=12'}
 
   magic-bytes.js@1.10.0:
     resolution: {integrity: sha512-/k20Lg2q8LE5xiaaSkMXk4sfvI+9EGEykFS4b0CHHGWqDYU0bGUFSwchNOMA56D7TCs9GwVTkqe9als1/ns8UQ==}
@@ -23801,6 +23823,8 @@ snapshots:
     dependencies:
       '@types/node': 20.17.9
 
+  '@types/luxon@3.4.2': {}
+
   '@types/mdast@4.0.4':
     dependencies:
       '@types/unist': 3.0.3
@@ -23818,6 +23842,8 @@ snapshots:
   '@types/mocha@10.0.10': {}
 
   '@types/ms@0.7.34': {}
+
+  '@types/node-cron@3.0.11': {}
 
   '@types/node-fetch@2.6.12':
     dependencies:
@@ -26273,6 +26299,11 @@ snapshots:
       - ts-node
 
   create-require@1.1.1: {}
+
+  cron@3.3.1:
+    dependencies:
+      '@types/luxon': 3.4.2
+      luxon: 3.5.0
 
   croner@4.1.97: {}
 
@@ -30404,6 +30435,8 @@ snapshots:
   lunr-languages@1.14.0: {}
 
   lunr@2.3.9: {}
+
+  luxon@3.5.0: {}
 
   magic-bytes.js@1.10.0: {}
 

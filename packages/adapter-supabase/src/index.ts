@@ -1,16 +1,16 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import {
-    type Memory,
-    type Goal,
-    type Relationship,
-    Actor,
-    GoalStatus,
     Account,
-    type UUID,
+    Actor,
+    DatabaseAdapter,
+    GoalStatus,
     Participant,
     Room,
+    type Goal,
+    type Memory,
+    type Relationship,
+    type UUID,
 } from "@ai16z/eliza";
-import { DatabaseAdapter } from "@ai16z/eliza";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { v4 as uuid } from "uuid";
 export class SupabaseDatabaseAdapter extends DatabaseAdapter {
     async getRoom(roomId: UUID): Promise<UUID | null> {
@@ -21,7 +21,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
             .single();
 
         if (error) {
-            throw new Error(`Error getting room: ${error.message}`);
+            return null;
         }
 
         return data ? (data.id as UUID) : null;

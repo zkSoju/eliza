@@ -32,10 +32,17 @@ export class CyberneticKnowledgeManager {
     }
 
     private async loadMarkdownFiles() {
-        const searchPath = path.join(this.config.contextPath, "**/*.md");
+        const rootPath = process.cwd();
+        const searchPath = path.join(rootPath, this.config.contextPath, "**/*.md");
 
         try {
             const files = await glob(searchPath, { nodir: true });
+
+            elizaLogger.log(
+                "Loading cybernetic knowledge from:",
+                searchPath,
+                files
+            );
 
             for (const file of files) {
                 const relativePath = path.relative(
@@ -108,14 +115,14 @@ export const cyberneticProvider: Provider = {
         const manager = new CyberneticKnowledgeManager(
             runtime as AgentRuntime,
             {
-                contextPath: "agent/src/context",
+                contextPath: "src/context",
             }
         );
 
         await manager.initialize();
         const knowledge = await manager.getKnowledge();
 
-        return;
+        return knowledge ? JSON.stringify(knowledge) : null;
     },
 };
 

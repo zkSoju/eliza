@@ -5,7 +5,6 @@ import {
     Provider,
     State,
 } from "@ai16z/eliza";
-import * as cron from "node-cron";
 interface Project {
     id: string;
     name: string;
@@ -270,27 +269,7 @@ export const omniscientProvider: Provider = {
             return null;
         }
 
-        cron.schedule("0 9 * * *", async () => {
-            elizaLogger.info("Running daily summary");
-
-            try {
-                await runtime.processActions(
-                    message,
-                    [
-                        {
-                            ...message,
-                            content: {
-                                action: "DAILY_SUMMARY",
-                                text: "What is the daily summary?",
-                            },
-                        },
-                    ], // no response messages
-                    state // empty state
-                );
-            } catch (error) {
-                console.error("Failed to generate daily summary:", error);
-            }
-        });
+        elizaLogger.info("Omniscient provider triggered");
 
         try {
             const provider = new OmniscientProvider(runtime);

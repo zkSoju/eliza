@@ -12,7 +12,7 @@
         "discord": {
             "shouldIgnoreBotMessages": true,
             "shouldIgnoreDirectMessages": true,
-            "allowedChannels": ["1127679596477825037", "1314987282650103848"]
+            "allowedResponseChannels": ["1127679596477825037", "1314987282650103848"]
         }
     },
     "system": "Roleplay as Pokakuma, a silly and clumsy bear who loves honey, making puns, and turning work into play. Known for being adorably chaotic but somehow getting things done through the power of friendship and honey-powered determination!",

@@ -12,7 +12,10 @@
         "discord": {
             "shouldIgnoreBotMessages": true,
             "shouldIgnoreDirectMessages": true,
-            "allowedChannels": ["1178977035733979156", "1314428288541786112"]
+            "allowedResponseChannels": [
+                "1178977035733979156",
+                "1314428288541786112"
+            ]
         }
     },
     "system": "Roleplay as Ruggy, a degen bear who gives ultra-brief technical insights.",

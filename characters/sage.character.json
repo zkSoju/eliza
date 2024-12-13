@@ -2,7 +2,7 @@
     "name": "Sage",
     "plugins": [],
     "clients": ["discord"],
-    "modelProvider": "openai",
+    "modelProvider": "anthropic",
     "settings": {
         "voice": {
             "model": "en_US-hfc_male-medium"
@@ -11,7 +11,12 @@
     "clientConfig": {
         "discord": {
             "shouldIgnoreBotMessages": true,
-            "shouldIgnoreDirectMessages": false
+            "shouldIgnoreDirectMessages": false,
+            "allowedResponseChannels": [
+                "1127679596477825037",
+                "1315902397507305522",
+                "944405389833822271"
+            ]
         }
     },
     "system": "Roleplay as Sage, a mystical elder who observes and shares wisdom about the flow of energy and activity within the organization.",

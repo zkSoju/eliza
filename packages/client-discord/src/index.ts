@@ -35,6 +35,7 @@ export class DiscordClient extends EventEmitter {
     character: Character;
     private messageManager: MessageManager;
     private voiceManager: VoiceManager;
+    private _scheduledActions: { [key: string]: NodeJS.Timeout } = {};
 
     constructor(runtime: IAgentRuntime) {
         super();
@@ -262,11 +263,12 @@ export class DiscordClient extends EventEmitter {
                     inReplyTo: stringToUuid(
                         `${reaction.message.id}-${this.runtime.agentId}`
                     ),
-                    roles: reaction.message.member?.roles.cache.map(role => ({
-                        id: role.id,
-                        name: role.name,
-                        color: role.color
-                    })) || [],
+                    roles:
+                        reaction.message.member?.roles.cache.map((role) => ({
+                            id: role.id,
+                            name: role.name,
+                            color: role.color,
+                        })) || [],
                 },
                 roomId,
                 createdAt: timestamp,
@@ -358,11 +360,12 @@ export class DiscordClient extends EventEmitter {
                     inReplyTo: stringToUuid(
                         reaction.message.id + "-" + this.runtime.agentId
                     ), // This is the ID of the original message
-                    roles: reaction.message.member?.roles.cache.map(role => ({
-                        id: role.id,
-                        name: role.name,
-                        color: role.color
-                    })) || [],
+                    roles:
+                        reaction.message.member?.roles.cache.map((role) => ({
+                            id: role.id,
+                            name: role.name,
+                            color: role.color,
+                        })) || [],
                 },
                 roomId,
                 createdAt: Date.now(),
@@ -396,6 +399,15 @@ export class DiscordClient extends EventEmitter {
         for (const [, guild] of guilds) {
             const fullGuild = await guild.fetch();
             this.voiceManager.scanGuild(fullGuild);
+        }
+    }
+
+    public async triggerSystemAction(channelId: string, action: string) {
+        elizaLogger.info(`Triggering system action: ${action}`);
+        try {
+            await this.messageManager.handleSystemAction(channelId, action);
+        } catch (error) {
+            elizaLogger.error(`Failed to run system action ${action}:`, error);
         }
     }
 }

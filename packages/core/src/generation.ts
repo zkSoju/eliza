@@ -2,16 +2,17 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createGroq } from "@ai-sdk/groq";
 import { createOpenAI } from "@ai-sdk/openai";
-import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
+import { fal } from "@fal-ai/client";
 import {
     generateObject as aiGenerateObject,
     generateText as aiGenerateText,
     GenerateObjectResult,
 } from "ai";
 import { Buffer } from "buffer";
+import { encodingForModel, TiktokenModel } from "js-tiktoken";
+import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import { createOllama } from "ollama-ai-provider";
 import OpenAI from "openai";
-import { encodingForModel, TiktokenModel } from "js-tiktoken";
 import Together from "together-ai";
 import { ZodSchema } from "zod";
 import { elizaLogger } from "./index.ts";
@@ -30,10 +31,9 @@ import {
     ITextGenerationService,
     ModelClass,
     ModelProviderName,
-    ServiceType,
     SearchResponse,
+    ServiceType,
 } from "./types.ts";
-import { fal } from "@fal-ai/client";
 
 /**
  * Send a message to the model for a text generateText - receive a string back and parse how you'd like
@@ -388,16 +388,22 @@ export async function generateText({
                 elizaLogger.debug("Initializing GAIANET model.");
 
                 var baseURL = models[provider].endpoint;
-                if(!baseURL){
-                    switch(modelClass){
+                if (!baseURL) {
+                    switch (modelClass) {
                         case ModelClass.SMALL:
-                            baseURL = settings.SMALL_GAIANET_SERVER_URL || "https://llama3b.gaia.domains/v1";
+                            baseURL =
+                                settings.SMALL_GAIANET_SERVER_URL ||
+                                "https://llama3b.gaia.domains/v1";
                             break;
                         case ModelClass.MEDIUM:
-                            baseURL = settings.MEDIUM_GAIANET_SERVER_URL || "https://llama8b.gaia.domains/v1";
+                            baseURL =
+                                settings.MEDIUM_GAIANET_SERVER_URL ||
+                                "https://llama8b.gaia.domains/v1";
                             break;
                         case ModelClass.LARGE:
-                            baseURL = settings.LARGE_GAIANET_SERVER_URL || "https://qwen72b.gaia.domains/v1";
+                            baseURL =
+                                settings.LARGE_GAIANET_SERVER_URL ||
+                                "https://qwen72b.gaia.domains/v1";
                             break;
                     }
                 }
@@ -1147,7 +1153,7 @@ export const generateObjectV2 = async ({
     const apiKey = runtime.token;
 
     try {
-        context = trimTokens(context, max_context_length, model);
+        context = trimTokens(context, max_context_length, "gpt-4o");
 
         const modelOptions: ModelSettings = {
             prompt: context,
@@ -1281,7 +1287,6 @@ async function handleAnthropic({
     schema,
     schemaName,
     schemaDescription,
-    mode,
     modelOptions,
 }: ProviderOptions): Promise<GenerateObjectResult<unknown>> {
     const anthropic = createAnthropic({ apiKey });
@@ -1290,7 +1295,6 @@ async function handleAnthropic({
         schema,
         schemaName,
         schemaDescription,
-        mode,
         ...modelOptions,
     });
 }

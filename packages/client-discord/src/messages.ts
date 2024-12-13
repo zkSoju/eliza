@@ -42,7 +42,7 @@ export type InterestChannels = {
 interface DiscordClientConfig {
     shouldIgnoreBotMessages?: boolean;
     shouldIgnoreDirectMessages?: boolean;
-    allowedChannels?: string[];
+    allowedResponseChannels?: string[];
     allowedRoles?: string[];
 }
 
@@ -72,18 +72,6 @@ export class MessageManager {
 
         const config = this.runtime.character.clientConfig
             ?.discord as DiscordClientConfig;
-
-        // Check if message is in allowed channels
-        if (config?.allowedChannels?.length) {
-            const channelId = message.channel.id;
-
-            if (!config.allowedChannels.includes(channelId)) {
-                elizaLogger.debug(
-                    `Ignoring message from non-allowed channel ${channelId}`
-                );
-                return;
-            }
-        }
 
         // Check if author has allowed roles (for guild messages)
         if (config?.allowedRoles?.length && message.guild) {
@@ -384,6 +372,18 @@ export class MessageManager {
                 const responseMessages = await callback(responseContent);
 
                 state = await this.runtime.updateRecentMessageState(state);
+
+                // If agent has allowed response channels, check if message is in them and ignore if not. This still allows agent to process messages in other channels
+                if (config?.allowedResponseChannels?.length) {
+                    const channelId = message.channel.id;
+
+                    if (!config.allowedResponseChannels.includes(channelId)) {
+                        elizaLogger.debug(
+                            `Ignoring message from non-allowed channel ${channelId}`
+                        );
+                        return;
+                    }
+                }
 
                 await this.runtime.processActions(
                     memory,
@@ -747,5 +747,80 @@ export class MessageManager {
 
         const data = await response.json();
         return data.username;
+    }
+
+    async handleSystemAction(targetChannelId: string, action: string) {
+        try {
+            // Find the first available text channel if target channel is not accessible
+            let channel: TextChannel | null = null;
+            try {
+                channel = (await this.client.channels.fetch(
+                    targetChannelId
+                )) as TextChannel;
+            } catch {
+                // If target channel not found, find first available text channel
+                for (const [, guild] of this.client.guilds.cache) {
+                    const textChannel = guild.channels.cache.find(
+                        (c) => c.isTextBased() && !c.isDMBased()
+                    ) as TextChannel;
+                    if (textChannel) {
+                        channel = textChannel;
+                        break;
+                    }
+                }
+            }
+
+            if (!channel) {
+                throw new Error("No suitable text channel found");
+            }
+
+            const systemId = stringToUuid(`system-${this.runtime.agentId}`);
+            const roomId = stringToUuid(
+                `${channel.id}-${this.runtime.agentId}`
+            );
+
+            const memory: Memory = {
+                id: stringToUuid(
+                    `${action}-${Date.now()}-${this.runtime.agentId}`
+                ),
+                userId: systemId,
+                agentId: this.runtime.agentId,
+                roomId,
+                content: {
+                    text: action,
+                    action,
+                    source: "discord",
+                },
+                createdAt: Date.now(),
+                embedding: getEmbeddingZeroVector(),
+            };
+
+            const callback: HandlerCallback = async (content: Content) => {
+                try {
+                    await sendMessageInChunks(channel!, content.text, "", []);
+                    return [];
+                } catch (error) {
+                    elizaLogger.error("Error sending system message:", error);
+                    return [];
+                }
+            };
+
+            const state = await this.runtime.composeState(memory, {
+                discordClient: this.client,
+                discordMessage: memory,
+                agentName:
+                    this.runtime.character.name ||
+                    this.client.user?.displayName,
+            });
+
+            await this.runtime.processActions(
+                memory,
+                [memory],
+                state,
+                callback
+            );
+        } catch (error) {
+            elizaLogger.error("Error in handleSystemAction:", error);
+        }
     }
 }

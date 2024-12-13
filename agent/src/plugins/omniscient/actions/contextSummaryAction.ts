@@ -3,6 +3,7 @@ import {
     HandlerCallback,
     IAgentRuntime,
     Memory,
+    ModelClass,
     State,
     stringToUuid,
 } from "@ai16z/eliza";
@@ -209,8 +210,6 @@ export const contextSummaryAction: Action = {
             (r) => r.name !== "@everyone"
         );
 
-        const DAILY_SUMMARY_CHANNEL = "1127679596477825037";
-
         // Check if this is a daily summary
         const isDaily = content.action === "DAILY_SUMMARY";
         const lookbackHours = isDaily ? 24 : 4;
@@ -288,7 +287,11 @@ ${importantMsgs.length > 0 ? "Important Updates:\n" + formatCategoryMessages(imp
                 timeframe: `${lookbackHours} hours`,
             },
             template,
-            isDaily ? { targetChannelId: DAILY_SUMMARY_CHANNEL } : {}
+            isDaily
+                ? {
+                      model: ModelClass.LARGE,
+                  }
+                : {}
         );
     },
 };

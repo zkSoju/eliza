@@ -38,6 +38,7 @@ export interface MessageOptions {
     error?: string;
     data?: Record<string, unknown>;
     targetChannelId?: string;
+    model?: ModelClass;
 }
 
 export async function generateActionResponse(
@@ -88,7 +89,7 @@ export async function generateDirectResponse(
     callback: (
         content: Content,
         files?: any[],
-        options?: { targetChannelId?: string }
+        options?: { targetChannelId?: string; model?: ModelClass }
     ) => Promise<Memory[]>,
     context: Record<string, unknown>,
     template: string,

@@ -5,6 +5,7 @@ import {
     ModelClass,
     State,
     composeContext,
+    elizaLogger,
     generateObjectV2,
     stringToUuid,
 } from "@ai16z/eliza";
@@ -257,6 +258,8 @@ export const importanceEvaluator: Evaluator = {
                 return true;
             }
 
+            elizaLogger.info("Importance evaluator triggered");
+
             // Get recent messages for context
             const recentMessages = await runtime.messageManager.getMemories({
                 roomId: message.roomId,
@@ -281,6 +284,8 @@ export const importanceEvaluator: Evaluator = {
                 modelClass: ModelClass.SMALL,
                 schema: ImportanceSchema,
             });
+
+            elizaLogger.info(result.object);
 
             const analysis = result.object as ImportanceAnalysis;
 

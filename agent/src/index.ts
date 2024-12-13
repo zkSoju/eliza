@@ -2,7 +2,7 @@ import { PostgresDatabaseAdapter } from "@ai16z/adapter-postgres";
 import { SqliteDatabaseAdapter } from "@ai16z/adapter-sqlite";
 import { AutoClientInterface } from "@ai16z/client-auto";
 import { DirectClientInterface } from "@ai16z/client-direct";
-import { DiscordClientInterface } from "@ai16z/client-discord";
+import { DiscordClient, DiscordClientInterface } from "@ai16z/client-discord";
 import { TelegramClientInterface } from "@ai16z/client-telegram";
 import { TwitterClientInterface } from "@ai16z/client-twitter";
 import {
@@ -25,6 +25,7 @@ import {
 import { zgPlugin } from "@ai16z/plugin-0g";
 import { bootstrapPlugin } from "@ai16z/plugin-bootstrap";
 // import { buttplugPlugin } from "@ai16z/plugin-buttplug";
+import { SupabaseDatabaseAdapter } from "@ai16z/adapter-supabase";
 import {
     advancedTradePlugin,
     coinbaseCommercePlugin,
@@ -39,6 +40,7 @@ import { createNodePlugin } from "@ai16z/plugin-node";
 import { teePlugin } from "@ai16z/plugin-tee";
 import Database from "better-sqlite3";
 import fs from "fs";
+import { schedule } from "node-cron";
 import path from "path";
 import readline from "readline";
 import { fileURLToPath } from "url";
@@ -270,7 +272,26 @@ export function getTokenForProvider(
 }
 
 function initializeDatabase(dataDir: string) {
-    if (process.env.POSTGRES_URL) {
+    if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_API_KEY) {
+        elizaLogger.info("Initializing Supabase connection...");
+        const db = new SupabaseDatabaseAdapter(
+            process.env.SUPABASE_URL,
+            process.env.SUPABASE_SERVICE_API_KEY
+        );
+
+        // Test the connection
+        db.init()
+            .then(() => {
+                elizaLogger.success(
+                    "Successfully connected to Supabase database"
+                );
+            })
+            .catch((error) => {
+                elizaLogger.error("Failed to connect to Supabase:", error);
+            });
+
+        return db;
+    } else if (process.env.POSTGRES_URL) {
         elizaLogger.info("Initializing PostgreSQL connection...");
         const db = new PostgresDatabaseAdapter({
             connectionString: process.env.POSTGRES_URL,
@@ -469,8 +490,26 @@ async function startAgent(character: Character, directClient) {
 
         const clients = await initializeClients(character, runtime);
 
-        directClient.registerAgent(runtime);
+        const THJ_CAVE_GENERAL_CHANNEL_ID = "1127679596477825037";
 
+        // Set up cron jobs for Discord clients
+        clients.forEach((client) => {
+            if (client instanceof DiscordClient) {
+                const cronSchedule =
+                    process.env.NODE_ENV === "development"
+                        ? "*/1 * * * *" // Every minute in dev
+                        : "0 9 * * *"; // 9 AM daily in prod
+
+                schedule(cronSchedule, () => {
+                    client.triggerSystemAction(
+                        THJ_CAVE_GENERAL_CHANNEL_ID,
+                        "DAILY_SUMMARY"
+                    );
+                });
+            }
+        });
+
+        directClient.registerAgent(runtime);
         return clients;
     } catch (error) {
         elizaLogger.error(
