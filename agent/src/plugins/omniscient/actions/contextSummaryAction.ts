@@ -122,20 +122,22 @@ function generateRoleSpecificTemplate(
         .filter((r) => r.name !== "@everyone")
         .map((r) => r.name)
         .join(", ");
-    return `Given the following context from various channels, provide a brief, focused summary for a team member with roles: ${roleNames || "General Member"}
+    return `Provide a focused summary of key updates for a team member with roles: ${roleNames || "General Member"}
 
 Recent Activity by Category:
 {{categoryMessages}}
 
 Guidelines:
-- Keep summaries extremely concise; expand only if there's substantial content
-- Focus on actionable information and key updates
-- Group by category/channel only if there are multiple active discussions
-- Include message links for important items
-- Match summary length to amount of actual content
-- Use markdown to format the summary (Up to ## headers)
+- Prioritize and highlight important updates first
+- Use emojis to categorize major updates (e.g., 🚨 Critical, 🎯 Goals)
+- Format key decisions and action items with bold text (**)
+- Include message links for critical references
+- Only include recent messages if they add significant context
+- Keep summaries focused on what matters most
+- Use clear headers for different areas of focus
+- Maintain professional but engaging tone
 
-Provide a clear, concise summary of recent activity.`;
+Focus on delivering the most impactful updates first, then add context from recent discussions if relevant.`;
 }
 
 export const contextSummaryAction: Action = {
@@ -297,18 +299,20 @@ ${importantMsgs.length > 0 ? "Important Updates:\n" + formatCategoryMessages(imp
 };
 
 function generateDailySummaryTemplate(): string {
-    return `Provide a concise daily summary of organizational activity.
+    return `Provide a daily summary focusing on key organizational developments.
 
 Recent Activity by Category:
 {{categoryMessages}}
 
 Guidelines:
-- Focus on key decisions, updates, and action items
-- Group by category to show activity across the organization
-- Include message links for important items
-- Keep the summary brief but comprehensive
-- Highlight trends or patterns in discussions
-- Use markdown to format the summary (Up to ## headers)
+- Lead with critical updates and important decisions
+- Use emojis to highlight priority (e.g., 🚨 Critical, 🎯 Goals)
+- Bold (**) key decisions and important changes
+- Include message links for major updates
+- Group by impact/priority first, then by category
+- Only include routine discussions if they impact key initiatives
+- Keep focus on actionable information
+- Format for easy scanning in Discord
 
-Provide a clear overview of the last 24 hours of activity.`;
+Emphasize the important developments first, then add context from general discussions if needed.`;
 }
