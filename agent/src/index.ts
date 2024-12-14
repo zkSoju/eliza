@@ -25,7 +25,6 @@ import {
 import { zgPlugin } from "@ai16z/plugin-0g";
 import { bootstrapPlugin } from "@ai16z/plugin-bootstrap";
 // import { buttplugPlugin } from "@ai16z/plugin-buttplug";
-import { SupabaseDatabaseAdapter } from "@ai16z/adapter-supabase";
 import {
     advancedTradePlugin,
     coinbaseCommercePlugin,
@@ -274,23 +273,23 @@ export function getTokenForProvider(
 function initializeDatabase(dataDir: string) {
     if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_API_KEY) {
         elizaLogger.info("Initializing Supabase connection...");
-        const db = new SupabaseDatabaseAdapter(
-            process.env.SUPABASE_URL,
-            process.env.SUPABASE_SERVICE_API_KEY
-        );
+        // const db = new SupabaseDatabaseAdapter(
+        //     process.env.SUPABASE_URL,
+        //     process.env.SUPABASE_SERVICE_API_KEY
+        // );
 
-        // Test the connection
-        db.init()
-            .then(() => {
-                elizaLogger.success(
-                    "Successfully connected to Supabase database"
-                );
-            })
-            .catch((error) => {
-                elizaLogger.error("Failed to connect to Supabase:", error);
-            });
+        // // Test the connection
+        // db.init()
+        //     .then(() => {
+        //         elizaLogger.success(
+        //             "Successfully connected to Supabase database"
+        //         );
+        //     })
+        //     .catch((error) => {
+        //         elizaLogger.error("Failed to connect to Supabase:", error);
+        //     });
 
-        return db;
+        return;
     } else if (process.env.POSTGRES_URL) {
         elizaLogger.info("Initializing PostgreSQL connection...");
         const db = new PostgresDatabaseAdapter({

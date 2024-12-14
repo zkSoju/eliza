@@ -10,7 +10,8 @@ import { OmniscientProvider } from "../providers/omniscientProvider";
 
 export const summaryAction: Action = {
     name: "SUMMARIZE_STATUS",
-    description: "Provides high-level overview of projects, teams, and critical issues",
+    description:
+        "Provides high-level overview of projects, teams, and critical issues",
     similes: ["STATUS", "OVERVIEW", "PROGRESS"],
     examples: [
         [
@@ -18,31 +19,31 @@ export const summaryAction: Action = {
                 user: "{{user1}}",
                 content: {
                     text: "What's our overall project status?",
-                    action: "SUMMARIZE_STATUS"
-                }
+                    action: "SUMMARIZE_STATUS",
+                },
             },
             {
                 user: "{{agentName}}",
                 content: {
-                    text: "*studies the sacred patterns* Three projects in motion, two critical issues need attention..."
-                }
-            }
+                    text: "*studies the sacred patterns* Three projects in motion, two critical issues need attention...",
+                },
+            },
         ],
         [
             {
                 user: "{{user1}}",
                 content: {
                     text: "How are our teams doing?",
-                    action: "SUMMARIZE_STATUS"
-                }
+                    action: "SUMMARIZE_STATUS",
+                },
             },
             {
                 user: "{{agentName}}",
                 content: {
-                    text: "*examines team crystals* Frontend team focused on auth, Backend tackling optimization..."
-                }
-            }
-        ]
+                    text: "*examines team crystals* Frontend team focused on auth, Backend tackling optimization...",
+                },
+            },
+        ],
     ],
     validate: async (runtime: IAgentRuntime, message: Memory, state: State) => {
         return true;
@@ -73,7 +74,7 @@ export const summaryAction: Action = {
             state,
             callback,
             {
-                data
+                data,
             },
             `Provide a high-level strategic overview:
 
@@ -87,5 +88,5 @@ Guidelines:
 - Keep focus on big picture trends
 - Note any resource or timeline risks`
         );
-    }
+    },
 };
