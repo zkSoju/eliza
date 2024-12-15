@@ -46,7 +46,6 @@ import { fileURLToPath } from "url";
 import yargs from "yargs";
 import berachainPlugin from "./plugins/berachain/berachainPlugin";
 import cyberneticPlugin from "./plugins/cybernetic/cyberneticPlugin";
-import omniscientPlugin from "./plugins/omniscient/omniscientPlugin";
 
 const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
 const __dirname = path.dirname(__filename); // get the name of the directory
@@ -400,7 +399,7 @@ export function createAgent(
         plugins: [
             bootstrapPlugin,
             cyberneticPlugin,
-            getSecret(character, "LINEAR_API_KEY") ? omniscientPlugin : null,
+            // getSecret(character, "LINEAR_API_KEY") ? omniscientPlugin : null,
             getSecret(character, "EVM_PRIVATE_KEY") ? berachainPlugin : null,
             getSecret(character, "CONFLUX_CORE_PRIVATE_KEY")
                 ? confluxPlugin
@@ -493,19 +492,31 @@ async function startAgent(character: Character, directClient) {
         const clients = await initializeClients(character, runtime);
 
         const THJ_CAVE_GENERAL_CHANNEL_ID = "1127679596477825037";
+        const TEST_GENERAL_CHANNEL_ID = "944405389833822271";
 
         // Set up cron jobs for Discord clients
         clients.forEach((client) => {
+            elizaLogger.info("Client: ", character.name);
             if (client instanceof DiscordClient && character.name === "Sage") {
+                elizaLogger.info("Setting up cron jobs for Sage");
                 const cronSchedule =
                     process.env.NODE_ENV === "development"
                         ? "*/1 * * * *" // Every minute in dev
-                        : "0 9 * * *"; // 9 AM daily in prod
+                        : "0 9 * * 1"; // 9 AM every Monday in prod
 
+                // Daily summary
                 schedule(cronSchedule, () => {
                     client.triggerSystemAction(
                         THJ_CAVE_GENERAL_CHANNEL_ID,
                         "DAILY_SUMMARY"
+                    );
+                });
+
+                // Market data refresh - run before daily summary
+                schedule(cronSchedule, () => {
+                    client.triggerSystemAction(
+                        TEST_GENERAL_CHANNEL_ID,
+                        "REFRESH_MARKET_DATA"
                     );
                 });
             }

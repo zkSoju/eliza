@@ -1,203 +1,146 @@
-import {
-    elizaLogger,
-    IAgentRuntime,
-    Memory,
-    Provider,
-    State,
-} from "@ai16z/eliza";
+import { elizaLogger, IAgentRuntime, Memory, Provider, State } from "@ai16z/eliza";
 
-interface OpenPanelProject {
+interface OpenPanelConfig {
     id: string;
     name: string;
-    type: 'app' | 'website' | 'docs';
+    type: string;
     clientId: string;
     clientSecret: string;
 }
 
 interface OpenPanelEvent {
     id: string;
-    name: string;
+    event: string;
     timestamp: string;
-    projectId: string;
-    data: Record<string, any>;
+    properties: Record<string, any>;
+    profile?: Record<string, any>;
+    meta?: Record<string, any>;
 }
 
-interface OpenPanelChartData {
-    projectId: string;
-    series: any[];
-    metrics: Record<string, number>;
-    previousPeriod?: any;
-}
-
-interface OpenPanelFunnelStep {
-    event: {
-        name: string;
-        displayName: string;
+interface OpenPanelResponse {
+    meta: {
+        count: number;
+        totalCount: number;
+        pages: number;
+        current: number;
     };
-    count: number;
-    percent: number;
-    dropoffCount: number;
-    dropoffPercent: number;
-    previousCount: number;
-}
-
-interface ProjectFunnel {
-    projectId: string;
-    totalSessions: number;
-    steps: OpenPanelFunnelStep[];
-}
-
-export interface OpenPanelCache {
-    projects: OpenPanelProject[];
-    events: Record<string, OpenPanelEvent[]>;
-    charts: Record<string, OpenPanelChartData>;
-    funnels: Record<string, ProjectFunnel>;
-    lastUpdated: number;
-    ttl: number;
+    data: OpenPanelEvent[];
 }
 
 export class OpenPanelProvider {
     private runtime: IAgentRuntime;
-    private static CACHE_TTL = 300000; // 5 minutes in milliseconds
-    private projects: OpenPanelProject[];
+    private projects: OpenPanelConfig[];
+    private baseUrl = 'https://api.openpanel.dev';
 
     constructor(runtime: IAgentRuntime) {
         this.runtime = runtime;
-        this.projects = this.loadProjectConfigs();
-    }
-
-    private loadProjectConfigs(): OpenPanelProject[] {
-        const projectConfigs = process.env.OPENPANEL_PROJECTS;
-        if (!projectConfigs) return [];
-
         try {
-            return JSON.parse(projectConfigs);
-        } catch (error) {
-            elizaLogger.error("Error parsing OPENPANEL_PROJECTS config:", error);
-            return [];
-        }
-    }
-
-    private async fetchOpenPanelData() {
-        try {
-            const projectData: {
-                events: Record<string, OpenPanelEvent[]>;
-                charts: Record<string, OpenPanelChartData>;
-                funnels: Record<string, ProjectFunnel>;
-            } = {
-                events: {},
-                charts: {},
-                funnels: {},
-            };
-
-            // Fetch data for each project
-            for (const project of this.projects) {
-                const headers = {
-                    'openpanel-client-id': project.clientId,
-                    'openpanel-client-secret': project.clientSecret,
-                };
-
-                // Fetch events
-                const eventsResponse = await fetch(
-                    `https://api.openpanel.dev/export/events?project_id=${project.id}&limit=50`,
-                    { headers }
-                );
-                const events = await eventsResponse.json();
-                projectData.events[project.id] = events.data.map(event => ({
-                    ...event,
-                    projectId: project.id
-                }));
-
-                // Fetch chart data
-                const chartsResponse = await fetch(
-                    `https://api.openpanel.dev/export/charts?projectId=${project.id}&interval=day&range=last_30_days`,
-                    { headers }
-                );
-                const charts = await chartsResponse.json();
-                projectData.charts[project.id] = {
-                    ...charts,
-                    projectId: project.id
-                };
-
-                // Fetch funnel data
-                const funnelResponse = await fetch(
-                    `https://api.openpanel.dev/export/funnel?projectId=${project.id}&events=[{"name":"page_view"},{"name":"sign_up"}]&range=last_30_days`,
-                    { headers }
-                );
-                const funnel = await funnelResponse.json();
-                projectData.funnels[project.id] = {
-                    ...funnel,
-                    projectId: project.id
-                };
+            // Parse projects from env
+            const projectsStr = process.env.OPENPANEL_PROJECTS;
+            if (!projectsStr) {
+                elizaLogger.error("OPENPANEL_PROJECTS environment variable is not set");
+                this.projects = [];
+                return;
             }
 
-            return {
-                projects: this.projects,
-                ...projectData
-            };
-        } catch (error) {
-            elizaLogger.error("Error fetching OpenPanel data:", error);
-            throw error;
-        }
-    }
-
-    private async refreshCache(): Promise<OpenPanelCache> {
-        elizaLogger.info("Refreshing OpenPanel cache");
-
-        try {
-            const data = await this.fetchOpenPanelData();
-
-            const cachedData: OpenPanelCache = {
-                ...data,
-                lastUpdated: Date.now(),
-                ttl: OpenPanelProvider.CACHE_TTL,
-            };
-
-            await this.runtime.cacheManager?.set(
-                `${this.runtime.character.name}/openpanel-data`,
-                cachedData
+            this.projects = JSON.parse(projectsStr);
+            elizaLogger.info("Loaded OpenPanel projects:",
+                this.projects.map(p => ({
+                    id: p.id,
+                    name: p.name,
+                    hasClientId: !!p.clientId,
+                    hasClientSecret: !!p.clientSecret
+                }))
             );
-
-            return cachedData;
         } catch (error) {
-            elizaLogger.error("Error refreshing OpenPanel cache:", error);
-            throw error;
+            elizaLogger.error("Error parsing OPENPANEL_PROJECTS:", error);
+            this.projects = [];
         }
     }
 
-    private isStale(data: OpenPanelCache): boolean {
-        return Date.now() - data.lastUpdated > data.ttl;
-    }
-
-    async getData(): Promise<OpenPanelCache | null> {
-        const cacheKey = `${this.runtime.character.name}/openpanel-data`;
-        const cachedData = await this.runtime.cacheManager?.get<OpenPanelCache>(cacheKey);
-
-        if (!cachedData || this.isStale(cachedData)) {
-            try {
-                return await this.refreshCache();
-            } catch (error) {
-                elizaLogger.error("Error refreshing OpenPanel cache:", error);
+    private async fetchEvents(projectId: string, options: {
+        event?: string | string[];
+        start?: string;
+        end?: string;
+        page?: number;
+        limit?: number;
+        includes?: string[];
+    }): Promise<OpenPanelResponse | null> {
+        try {
+            const project = this.projects.find(p => p.id === projectId);
+            if (!project) {
+                elizaLogger.error(`Project ${projectId} not found`);
                 return null;
             }
-        }
 
-        return cachedData;
+            if (!project.clientId || !project.clientSecret) {
+                elizaLogger.error(`Missing credentials for project ${project.name}`);
+                return null;
+            }
+
+            const url = new URL(`${this.baseUrl}/export/events`);
+
+            // Add query parameters
+            url.searchParams.append('project_id', projectId);
+            if (options.event) {
+                const events = Array.isArray(options.event) ? options.event : [options.event];
+                events.forEach(e => url.searchParams.append('event', e));
+            }
+            if (options.start) url.searchParams.append('start', options.start);
+            if (options.end) url.searchParams.append('end', options.end);
+            if (options.page) url.searchParams.append('page', options.page.toString());
+            if (options.limit) url.searchParams.append('limit', options.limit.toString());
+            if (options.includes) {
+                options.includes.forEach(i => url.searchParams.append('includes', i));
+            }
+
+            elizaLogger.info('Fetching OpenPanel events:', {
+                url: url.toString(),
+                project: project.name,
+                clientIdLength: project.clientId.length,
+                clientSecretLength: project.clientSecret.length
+            });
+
+            const response = await fetch(url.toString(), {
+                headers: {
+                    'openpanel-client-id': project.clientId,
+                    'openpanel-client-secret': project.clientSecret,
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (!response.ok) {
+                const responseText = await response.text();
+                elizaLogger.error('OpenPanel API error:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    response: responseText,
+                    headers: Object.fromEntries(response.headers.entries())
+                });
+                return null;
+            }
+
+            const data = await response.json();
+            return data as OpenPanelResponse;
+        } catch (error) {
+            elizaLogger.error('Error fetching OpenPanel events:', error);
+            return null;
+        }
     }
 
-    async getProjectData(projectId: string): Promise<{
-        events: OpenPanelEvent[];
-        charts: OpenPanelChartData;
-        funnel: ProjectFunnel;
-    } | null> {
-        const data = await this.getData();
-        if (!data) return null;
+    async getProjectEvents(projectId: string): Promise<OpenPanelEvent[] | null> {
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - 7); // Last 7 days
 
-        return {
-            events: data.events[projectId] || [],
-            charts: data.charts[projectId],
-            funnel: data.funnels[projectId]
-        };
+        const response = await this.fetchEvents(projectId, {
+            start: startDate.toISOString().split('T')[0],
+            end: endDate.toISOString().split('T')[0],
+            includes: ['profile', 'meta'],
+            limit: 50
+        });
+
+        return response?.data || null;
     }
 }
 
@@ -207,20 +150,30 @@ export const openPanelProvider: Provider = {
         message: Memory,
         state?: State
     ): Promise<string | null> {
-        const projectConfigs = process.env.OPENPANEL_PROJECTS;
-        if (!projectConfigs) {
+        if (!process.env.OPENPANEL_PROJECTS) {
             elizaLogger.error("OpenPanel projects not configured");
             return null;
         }
 
-        elizaLogger.info("OpenPanel provider triggered");
-
         try {
             const provider = new OpenPanelProvider(runtime);
-            const data = await provider.getData();
-            if (!data) return null;
+            const allEvents: Record<string, OpenPanelEvent[]> = {};
 
-            return JSON.stringify(data);
+            // Fetch events for all projects
+            const projects = JSON.parse(process.env.OPENPANEL_PROJECTS);
+            await Promise.all(
+                projects.map(async (project: OpenPanelConfig) => {
+                    const events = await provider.getProjectEvents(project.id);
+                    if (events) {
+                        allEvents[project.id] = events;
+                    }
+                })
+            );
+
+            return JSON.stringify({
+                events: allEvents,
+                timestamp: new Date().toISOString(),
+            });
         } catch (error) {
             elizaLogger.error("Error in OpenPanel provider:", error);
             return null;

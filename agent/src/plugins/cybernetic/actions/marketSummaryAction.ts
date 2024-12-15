@@ -1,5 +1,6 @@
 import {
     Action,
+    elizaLogger,
     HandlerCallback,
     IAgentRuntime,
     Memory,
@@ -8,78 +9,60 @@ import {
     stringToUuid,
 } from "@ai16z/eliza";
 import { generateDirectResponse } from "../../../utils/messageGenerator";
-import { MarketTrendAnalysis } from "../evaluators/marketTrendEvaluator";
+import { TokenCollection } from "../providers/simpleHashProvider";
 
-interface CleanedMarketTrend {
+interface MarketSummary {
+    honeycomb?: TokenCollection;
+    honeyJars: TokenCollection[];
     timestamp: string;
-    category: string;
-    significance: number;
-    sentiment: string;
-    keyMetrics: Array<{
-        name: string;
-        value: number;
-        trend: string;
-    }>;
-    insights: string[];
-    actionItems?: string[];
-    originalMessage: string;
 }
 
-function cleanMarketTrend(memory: Memory): CleanedMarketTrend {
-    const trend = memory.content.marketTrend as MarketTrendAnalysis;
-    return {
-        timestamp: memory.createdAt,
-        category: trend.category,
-        significance: trend.significance,
-        sentiment: trend.sentiment,
-        keyMetrics: trend.keyMetrics,
-        insights: trend.insights,
-        actionItems: trend.actionItems,
-        originalMessage: memory.content.text
-    };
+function formatPrice(price: number): string {
+    // Always format with 2 decimal places, no comma for thousands in price
+    return `$${price.toFixed(2)}`;
 }
 
-function groupTrendsByCategory(trends: CleanedMarketTrend[]): {
-    [key: string]: CleanedMarketTrend[];
-} {
-    return trends.reduce((acc: { [key: string]: CleanedMarketTrend[] }, trend) => {
-        if (!acc[trend.category]) {
-            acc[trend.category] = [];
-        }
-        acc[trend.category].push(trend);
-        return acc;
-    }, {});
+function formatNumber(num: number): string {
+    // Use comma for thousands only in numbers like holder count
+    return num.toLocaleString();
 }
 
-function formatCategoryTrends(trends: CleanedMarketTrend[]): string {
-    // Sort by significance and timestamp
-    const sortedTrends = trends.sort((a, b) =>
-        b.significance - a.significance ||
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-    );
+function formatCollectionData(collection: TokenCollection): string {
+    const floorPrice = collection.computed?.floor_price_usd
+        ? formatPrice(collection.computed.floor_price_usd)
+        : "N/A";
 
-    return sortedTrends.map(trend => {
-        const sentimentEmoji = {
-            bullish: "📈",
-            bearish: "📉",
-            neutral: "➖"
-        }[trend.sentiment];
-
-        const metrics = trend.keyMetrics
-            .map(m => `${m.name}: ${m.value} (${m.trend})`)
-            .join(", ");
-
-        return `${sentimentEmoji} **Significance: ${trend.significance}/10**
-- Original Context: ${trend.originalMessage}
-- Key Metrics: ${metrics}
-- Insights: ${trend.insights.join(" | ")}
-${trend.actionItems ? `- Action Items: ${trend.actionItems.join(" | ")}` : ""}`;
-    }).join("\n\n");
+    return `${collection.name}:
+- Floor Price: ${floorPrice}
+- Holders: ${formatNumber(collection.distinct_owner_count)}
+- Supply: ${formatNumber(collection.total_quantity)}
+- Marketplaces: ${collection.marketplace_pages.map((m) => m.marketplace_name).join(", ")}`;
 }
+
+const template = `Provide a concise market overview using the stored insights:
+
+Market Data:
+{{marketData}}
+
+Guidelines:
+- Keep insights extremely brief
+- Use emojis for visual clarity (🍯 for Honeycomb, 🏺 for HoneyJars)
+- Focus on most significant changes
+- Highlight key risks/opportunities
+- Compare generations when relevant
+- Format prices with proper commas for thousands
+- Show chain for each generation
+
+Format:
+- Start with Honeycomb overview
+- List HoneyJars by generation
+- Add key trends
+- Note any important watch points`;
 
 export const marketSummaryAction: Action = {
     name: "SUMMARIZE_MARKET",
-    description: "Summarizes recent market trends and provides actionable insights",
+    description:
+        "Summarizes recent market trends and provides actionable insights",
     similes: ["MARKET_SUMMARY", "TREND_OVERVIEW", "MARKET_UPDATE"],
     examples: [
         [
@@ -87,16 +70,10 @@ export const marketSummaryAction: Action = {
                 user: "{{user1}}",
                 content: {
                     text: "What are the key market trends we should know about?",
-                    action: "SUMMARIZE_MARKET"
-                }
+                    action: "SUMMARIZE_MARKET",
+                },
             },
-            {
-                user: "{{agentName}}",
-                content: {
-                    text: "Three significant market trends have emerged in the last 24 hours..."
-                }
-            }
-        ]
+        ],
     ],
     validate: async (runtime: IAgentRuntime, message: Memory, state: State) => {
         return true;
@@ -108,78 +85,54 @@ export const marketSummaryAction: Action = {
         _options: unknown,
         callback: HandlerCallback
     ) => {
-        // Get market trends from memory
-        const lookbackHours = 24;
-        const lookbackTime = Date.now() - lookbackHours * 60 * 60 * 1000;
+        try {
+            // Get latest market data from memory
+            const recentMemory = await runtime.messageManager.getMemories({
+                roomId: stringToUuid("market-trends-" + runtime.agentId),
+                count: 1,
+            });
 
-        const marketTrends = await runtime.messageManager.getMemories({
-            roomId: stringToUuid("market-trends-" + runtime.agentId),
-            count: 100,
-            unique: true,
-            start: lookbackTime,
-        });
+            elizaLogger.info("Recent memory", {
+                recentMemory,
+            });
 
-        if (!marketTrends.length) {
+            if (!recentMemory.length) {
+                return generateDirectResponse(
+                    runtime,
+                    state,
+                    callback,
+                    {},
+                    "No recent market data available",
+                    { error: "No data available" }
+                );
+            }
+
+            const { marketData, insights } = recentMemory[0].content;
+
+            return generateDirectResponse(
+                runtime,
+                state,
+                callback,
+                {
+                    marketData: JSON.stringify(
+                        { marketData, insights },
+                        null,
+                        2
+                    ),
+                },
+                template,
+                { model: ModelClass.LARGE }
+            );
+        } catch (error) {
+            elizaLogger.error("Error in market summary action:", error);
             return generateDirectResponse(
                 runtime,
                 state,
                 callback,
                 {},
-                "No recent market trends available",
-                { error: "No data available" }
+                "Error generating market summary",
+                { error: "Processing error" }
             );
         }
-
-        // Clean and process trends
-        const cleanedTrends = marketTrends
-            .filter(msg => msg.content.marketTrend)
-            .map(msg => cleanMarketTrend(msg));
-
-        // Group trends by category
-        const trendsByCategory = groupTrendsByCategory(cleanedTrends);
-
-        // Format categories
-        const formattedCategories = Object.entries(trendsByCategory)
-            .map(([category, trends]) => `## ${category.toUpperCase()}\n${formatCategoryTrends(trends)}`)
-            .join("\n\n");
-
-        const template = `Analyze recent market trends and provide strategic insights:
-
-Market Activity by Category:
-{{marketTrends}}
-
-Price Data:
-{{priceData}}
-
-Guidelines:
-- Prioritize high-significance trends first
-- Group related patterns across categories
-- Highlight actionable opportunities
-- Note potential risks and mitigation strategies
-- Consider cross-chain correlations
-- Track sentiment shifts and volume patterns
-
-Focus Areas:
-- Price movements and volume trends
-- Holder behavior patterns
-- Cross-chain dynamics
-- Market sentiment shifts
-- Actionable opportunities
-- Risk factors`;
-
-        return generateDirectResponse(
-            runtime,
-            state,
-            callback,
-            {
-                marketTrends: formattedCategories,
-                priceData: JSON.stringify(cleanedTrends
-                    .filter(t => t.category === "token_price")
-                    .map(t => t.keyMetrics), null, 2),
-                timeframe: `${lookbackHours} hours`
-            },
-            template,
-            { model: ModelClass.LARGE }
-        );
-    }
+    },
 };
