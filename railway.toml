@@ -3,11 +3,11 @@ builder = "NIXPACKS"
 buildCommand = "pnpm install"
 
 [deploy]
-startCommand = "pnpm start --character=\"characters/sage.character.json,characters/pokakuma.character.json\""
-healthcheckPath = "/health"
-healthcheckTimeout = 100
-restartPolicyType = "ON_FAILURE"
-restartPolicyMaxRetries = 5
+startCommand = "pnpm start --character=\"characters/sage.character.json\""
+// healthcheckPath = "/health"
+// healthcheckTimeout = 100
+// restartPolicyType = "ON_FAILURE"
+// restartPolicyMaxRetries = 5
 
 [deploy.envs]
 NODE_ENV = "production"
