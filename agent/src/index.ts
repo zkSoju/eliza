@@ -499,6 +499,7 @@ async function startAgent(character: Character, directClient) {
             elizaLogger.info("Client: ", character.name);
             if (client instanceof DiscordClient && character.name === "Sage") {
                 elizaLogger.info("Setting up cron jobs for Sage");
+
                 const cronSchedule =
                     process.env.NODE_ENV === "development"
                         ? "*/1 * * * *" // Every minute in dev

@@ -5,14 +5,13 @@ import {
     Memory,
     ModelClass,
     State,
+    composeContext,
     elizaLogger,
     generateObjectV2,
-    composeContext,
     stringToUuid,
 } from "@ai16z/eliza";
-import { generateDirectResponse } from "../../../utils/messageGenerator";
 import { z } from "zod";
-import { OpenPanelProvider } from "../providers/openPanelProvider";
+import { generateDirectResponse } from "../../../utils/messageGenerator";
 
 const AnalyticsInsightSchema = z.object({
     project: z.object({
@@ -32,12 +31,14 @@ const AnalyticsInsightSchema = z.object({
             drop_off_points: z.array(z.string()),
         }),
     }),
-    trends: z.array(z.object({
-        metric: z.string(),
-        direction: z.enum(["increasing", "decreasing", "stable"]),
-        significance: z.number().min(1).max(10),
-        context: z.string(),
-    })),
+    trends: z.array(
+        z.object({
+            metric: z.string(),
+            direction: z.enum(["increasing", "decreasing", "stable"]),
+            significance: z.number().min(1).max(10),
+            context: z.string(),
+        })
+    ),
     insights: z.array(z.string()),
     recommendations: z.array(z.string()),
 });
@@ -139,29 +140,36 @@ export const analyticsInsightAction: Action = {
 
             // Process each project's analytics
             const processedInsights = await Promise.all(
-                Object.entries(events).map(async ([projectId, projectEvents]) => {
-                    const context = composeContext({
-                        state: {
-                            ...state,
+                Object.entries(events).map(
+                    async ([projectId, projectEvents]) => {
+                        const context = composeContext({
+                            state: {
+                                ...state,
+                                projectId,
+                                projectData: JSON.stringify(
+                                    projectEvents,
+                                    null,
+                                    2
+                                ),
+                                previousAnalysis:
+                                    "No previous analysis available", // TODO: Implement historical comparison
+                            },
+                            template: analyticsTemplate,
+                        });
+
+                        const result = await generateObjectV2({
+                            runtime,
+                            context,
+                            modelClass: ModelClass.SMALL,
+                            schema: AnalyticsInsightSchema,
+                        });
+
+                        return {
                             projectId,
-                            projectData: JSON.stringify(projectEvents, null, 2),
-                            previousAnalysis: "No previous analysis available", // TODO: Implement historical comparison
-                        },
-                        template: analyticsTemplate,
-                    });
-
-                    const result = await generateObjectV2({
-                        runtime,
-                        context,
-                        modelClass: ModelClass.SMALL,
-                        schema: AnalyticsInsightSchema,
-                    });
-
-                    return {
-                        projectId,
-                        analysis: result.object,
-                    };
-                })
+                            analysis: result.object,
+                        };
+                    }
+                )
             );
 
             return generateDirectResponse(
