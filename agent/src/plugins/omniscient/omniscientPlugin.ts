@@ -9,15 +9,10 @@ import { omniscientProvider } from "./providers/omniscientProvider";
 
 export const omniscientPlugin: Plugin = {
     name: "OMNISCIENT",
-    description:
-        "Maintains project overview and guides team focus by filtering noise and highlighting priorities",
+    description: "Strategic intelligence and market analysis capabilities",
     evaluators: [projectEvaluator, importanceEvaluator, roleEvaluator],
     providers: [omniscientProvider],
-    actions: [
-        summaryAction,
-        projectSummaryAction,
-        contextSummaryAction,
-    ]
+    actions: [summaryAction, projectSummaryAction, contextSummaryAction],
 };
 
 export default omniscientPlugin;

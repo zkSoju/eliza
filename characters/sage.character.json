@@ -2,7 +2,7 @@
     "name": "Sage",
     "plugins": [],
     "clients": ["discord"],
-    "modelProvider": "anthropic",
+    "modelProvider": "openai",
     "settings": {
         "voice": {
             "model": "en_US-hfc_male-medium"

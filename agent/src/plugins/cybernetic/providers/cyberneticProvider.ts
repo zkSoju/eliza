@@ -33,7 +33,11 @@ export class CyberneticKnowledgeManager {
 
     private async loadMarkdownFiles() {
         const rootPath = process.cwd();
-        const searchPath = path.join(rootPath, this.config.contextPath, "**/*.md");
+        const searchPath = path.join(
+            rootPath,
+            this.config.contextPath,
+            "**/*.md"
+        );
 
         try {
             const files = await glob(searchPath, { nodir: true });
@@ -112,15 +116,15 @@ export const cyberneticProvider: Provider = {
         message: Memory,
         state?: State
     ): Promise<string | null> {
-        const manager = new CyberneticKnowledgeManager(
-            runtime as AgentRuntime,
-            {
-                contextPath: "src/context",
-            }
-        );
+        // const manager = new CyberneticKnowledgeManager(
+        //     runtime as AgentRuntime,
+        //     {
+        //         contextPath: "src/context",
+        //     }
+        // );
 
-        await manager.initialize();
-        const knowledge = await manager.getKnowledge();
+        // await manager.initialize();
+        // const knowledge = await manager.getKnowledge();
 
         return knowledge ? JSON.stringify(knowledge) : null;
     },

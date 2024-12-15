@@ -1,5 +1,6 @@
 import {
     Action,
+    Content,
     HandlerCallback,
     IAgentRuntime,
     Memory,
@@ -7,11 +8,10 @@ import {
     State,
     composeContext,
     generateText,
-    Content,
 } from "@ai16z/eliza";
 import { generateDirectResponse } from "../../../utils/messageGenerator";
-import { OmniscientProvider } from "../providers/omniscientProvider";
 import { RoleContent } from "../evaluators/roleEvaluator";
+import { OmniscientProvider } from "../providers/omniscientProvider";
 
 interface CleanedMessage {
     id: string;
@@ -40,7 +40,7 @@ function cleanMessageForSummary(memory: Memory): CleanedMessage {
         timestamp: new Date(memory.createdAt || Date.now()).toISOString(),
         text: content.text,
         user: content.user || memory.userId,
-        userName: content.userName || 'unknown',
+        userName: content.userName || "unknown",
         roles: roles.map((r) => r.name),
         room: memory.roomId,
         // Only include if present
@@ -84,7 +84,9 @@ export const priorityFilterAction: Action = {
     ) => {
         // Get cached role information
         const cacheKey = `${runtime.character.name}/user-role/${message.userId}`;
-        const roleInfo = await runtime.cacheManager?.get<RoleContent & { guidance: any }>(cacheKey);
+        const roleInfo = await runtime.cacheManager?.get<
+            RoleContent & { guidance: any }
+        >(cacheKey);
 
         if (!roleInfo) {
             return generateDirectResponse(
@@ -130,13 +132,17 @@ export const priorityFilterAction: Action = {
         const priorityContext = composeContext({
             state: {
                 ...state,
-                roleInfo: JSON.stringify({
-                    primaryRole: roleInfo.primaryRole,
-                    focusAreas: roleInfo.focusAreas,
-                    responsibilities: roleInfo.responsibilities,
-                    accessLevel: roleInfo.accessLevel
-                }, null, 2),
-                recentMessages: cleanedMessages.map(m => m.text).join("\n"),
+                roleInfo: JSON.stringify(
+                    {
+                        primaryRole: roleInfo.primaryRole,
+                        focusAreas: roleInfo.focusAreas,
+                        responsibilities: roleInfo.responsibilities,
+                        accessLevel: roleInfo.accessLevel,
+                    },
+                    null,
+                    2
+                ),
+                recentMessages: cleanedMessages.map((m) => m.text).join("\n"),
                 projectData: JSON.stringify(
                     {
                         criticalIssues: data.issues.filter(
@@ -178,7 +184,7 @@ export const priorityFilterAction: Action = {
                     focusAreas: roleInfo.focusAreas,
                     responsibilities: roleInfo.responsibilities,
                     lastUpdated: data.lastUpdated,
-                    priorities
+                    priorities,
                 },
             },
             priorities
