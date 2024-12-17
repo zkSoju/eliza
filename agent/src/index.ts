@@ -46,6 +46,7 @@ import { fileURLToPath } from "url";
 import yargs from "yargs";
 import berachainPlugin from "./plugins/berachain/berachainPlugin";
 import cyberneticPlugin from "./plugins/cybernetic/cyberneticPlugin";
+import omniscientPlugin from "./plugins/omniscient/omniscientPlugin";
 
 const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
 const __dirname = path.dirname(__filename); // get the name of the directory
@@ -399,7 +400,7 @@ export function createAgent(
         plugins: [
             bootstrapPlugin,
             cyberneticPlugin,
-            // getSecret(character, "LINEAR_API_KEY") ? omniscientPlugin : null,
+            getSecret(character, "LINEAR_API_KEY") ? omniscientPlugin : null,
             getSecret(character, "EVM_PRIVATE_KEY") ? berachainPlugin : null,
             getSecret(character, "CONFLUX_CORE_PRIVATE_KEY")
                 ? confluxPlugin
