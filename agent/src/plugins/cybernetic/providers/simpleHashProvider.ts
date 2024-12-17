@@ -100,10 +100,17 @@ export interface HistoricalFloorPrice {
     marketplace_name: string;
 }
 
+export interface SimpleHashCache {
+    collections: Record<string, TokenCollection>;
+    lastUpdated: number;
+    ttl: number;
+}
+
 export class SimpleHashProvider {
     private runtime: IAgentRuntime;
     private apiKey: string;
     private tokens: TokenConfig[];
+    private static CACHE_TTL = 3600000; // 1 hour in milliseconds
 
     constructor(runtime: IAgentRuntime) {
         this.runtime = runtime;
@@ -152,22 +159,29 @@ export class SimpleHashProvider {
         return `${token.chain}.${token.contractAddress}`;
     }
 
-    async getCollectionActivity(collectionIds: string[]): Promise<Record<string, CollectionActivity> | null> {
+    async getCollectionActivity(
+        collectionIds: string[]
+    ): Promise<Record<string, CollectionActivity> | null> {
         try {
-            const url = new URL('https://api.simplehash.com/api/v0/nfts/collections_activity');
-            url.searchParams.append('collection_ids', collectionIds.join(','));
+            const url = new URL(
+                "https://api.simplehash.com/api/v0/nfts/collections_activity"
+            );
+            url.searchParams.append("collection_ids", collectionIds.join(","));
 
-            elizaLogger.info('Fetching collection activity:', collectionIds);
+            elizaLogger.info("Fetching collection activity:", collectionIds);
 
             const response = await fetch(url.toString(), {
                 headers: {
-                    'X-API-KEY': this.apiKey,
-                    'Accept': 'application/json',
-                }
+                    "X-API-KEY": this.apiKey,
+                    Accept: "application/json",
+                },
             });
 
             if (!response.ok) {
-                elizaLogger.error('Error fetching collection activity:', response.statusText);
+                elizaLogger.error(
+                    "Error fetching collection activity:",
+                    response.statusText
+                );
                 return null;
             }
 
@@ -180,33 +194,38 @@ export class SimpleHashProvider {
 
             return activities;
         } catch (error) {
-            elizaLogger.error('Error fetching collection activity:', error);
+            elizaLogger.error("Error fetching collection activity:", error);
             return null;
         }
     }
 
-    async getHistoricalFloorPrices(collectionId: string): Promise<HistoricalFloorPrice[] | null> {
+    async getHistoricalFloorPrices(
+        collectionId: string
+    ): Promise<HistoricalFloorPrice[] | null> {
         try {
             const url = `https://api.simplehash.com/api/v0/nfts/floor_prices_v2/collection/${collectionId}/daily`;
 
-            elizaLogger.info('Fetching historical floor prices:', collectionId);
+            elizaLogger.info("Fetching historical floor prices:", collectionId);
 
             const response = await fetch(url, {
                 headers: {
-                    'X-API-KEY': this.apiKey,
-                    'Accept': 'application/json',
-                }
+                    "X-API-KEY": this.apiKey,
+                    Accept: "application/json",
+                },
             });
 
             if (!response.ok) {
-                elizaLogger.error('Error fetching historical floor prices:', response.statusText);
+                elizaLogger.error(
+                    "Error fetching historical floor prices:",
+                    response.statusText
+                );
                 return null;
             }
 
             const data = await response.json();
             return data.floor_prices;
         } catch (error) {
-            elizaLogger.error('Error fetching historical floor prices:', error);
+            elizaLogger.error("Error fetching historical floor prices:", error);
             return null;
         }
     }
@@ -225,13 +244,29 @@ export class SimpleHashProvider {
         return {
             ...collection,
             computed: {
-                floor_price_usd: floorPrice ? formatPrice(floorPrice.value_usd_cents) : 0,
-                volume_24h_usd: activity ? formatPrice(activity["1_day_volume_usd_cents"]) : 0,
-                volume_7d_usd: activity ? formatPrice(activity["7_day_volume_usd_cents"]) : 0,
-                volume_30d_usd: activity ? formatPrice(activity["30_day_volume_usd_cents"]) : 0,
-                price_change_24h: activity ? Math.round(activity["1_day_volume_change_percent"] * 100) / 100 : 0,
-                price_change_7d: activity ? Math.round(activity["7_day_volume_change_percent"] * 100) / 100 : 0,
-            }
+                floor_price_usd: floorPrice
+                    ? formatPrice(floorPrice.value_usd_cents)
+                    : 0,
+                volume_24h_usd: activity
+                    ? formatPrice(activity["1_day_volume_usd_cents"])
+                    : 0,
+                volume_7d_usd: activity
+                    ? formatPrice(activity["7_day_volume_usd_cents"])
+                    : 0,
+                volume_30d_usd: activity
+                    ? formatPrice(activity["30_day_volume_usd_cents"])
+                    : 0,
+                price_change_24h: activity
+                    ? Math.round(
+                          activity["1_day_volume_change_percent"] * 100
+                      ) / 100
+                    : 0,
+                price_change_7d: activity
+                    ? Math.round(
+                          activity["7_day_volume_change_percent"] * 100
+                      ) / 100
+                    : 0,
+            },
         };
     }
 
@@ -245,9 +280,9 @@ export class SimpleHashProvider {
                     const url = `https://api.simplehash.com/api/v0/nfts/collections/${token.chain}/${token.contractAddress}`;
                     const response = await fetch(url, {
                         headers: {
-                            'X-API-KEY': this.apiKey,
-                            'Accept': 'application/json',
-                        }
+                            "X-API-KEY": this.apiKey,
+                            Accept: "application/json",
+                        },
                     });
 
                     if (!response.ok) return;
@@ -256,21 +291,25 @@ export class SimpleHashProvider {
                     if (data.collections?.[0]) {
                         collections[token.id] = {
                             ...data.collections[0],
-                            token_config: token
+                            token_config: token,
                         };
                     }
                 })
             );
 
             // Fetch activity data
-            const collectionIds = Object.values(collections).map(c => c.collection_id);
+            const collectionIds = Object.values(collections).map(
+                (c) => c.collection_id
+            );
             const activities = await this.getCollectionActivity(collectionIds);
 
             // Fetch historical data for each collection
             const historicalData: Record<string, HistoricalFloorPrice[]> = {};
             await Promise.all(
                 Object.values(collections).map(async (collection) => {
-                    const history = await this.getHistoricalFloorPrices(collection.collection_id);
+                    const history = await this.getHistoricalFloorPrices(
+                        collection.collection_id
+                    );
                     if (history) {
                         historicalData[collection.collection_id] = history;
                     }
@@ -278,16 +317,18 @@ export class SimpleHashProvider {
             );
 
             // Enrich collections with activity and historical data
-            Object.values(collections).forEach(collection => {
+            Object.values(collections).forEach((collection) => {
                 collection.activity = activities?.[collection.collection_id];
-                collection.historical_floors = historicalData[collection.collection_id];
+                collection.historical_floors =
+                    historicalData[collection.collection_id];
                 // Format and add computed properties
-                collections[collection.token_config.id] = this.formatCollectionData(collection);
+                collections[collection.token_config.id] =
+                    this.formatCollectionData(collection);
             });
 
             return collections;
         } catch (error) {
-            elizaLogger.error('Error fetching market trends:', error);
+            elizaLogger.error("Error fetching market trends:", error);
             return null;
         }
     }
@@ -295,6 +336,59 @@ export class SimpleHashProvider {
     // Method to add new tokens to track
     addToken(token: TokenConfig) {
         this.tokens.push(token);
+    }
+
+    private async refreshCache(): Promise<SimpleHashCache> {
+        elizaLogger.info("Refreshing SimpleHash cache");
+
+        try {
+            const collections = await this.getMarketTrends();
+            if (!collections) {
+                throw new Error("Failed to fetch market trends");
+            }
+
+            const cachedData: SimpleHashCache = {
+                collections,
+                lastUpdated: Date.now(),
+                ttl: SimpleHashProvider.CACHE_TTL,
+            };
+
+            await this.runtime.cacheManager?.set(
+                `${this.runtime.character.name}/simplehash-data`,
+                cachedData
+            );
+
+            return cachedData;
+        } catch (error) {
+            elizaLogger.error("Error refreshing SimpleHash cache:", error);
+            throw error;
+        }
+    }
+
+    private isStale(data: SimpleHashCache): boolean {
+        return Date.now() - data.lastUpdated > data.ttl;
+    }
+
+    async getData(): Promise<SimpleHashCache | null> {
+        const cacheKey = `${this.runtime.character.name}/simplehash-data`;
+        const cachedData =
+            await this.runtime.cacheManager?.get<SimpleHashCache>(cacheKey);
+
+        if (!cachedData || this.isStale(cachedData)) {
+            try {
+                return await this.refreshCache();
+            } catch (error) {
+                elizaLogger.error("Error refreshing SimpleHash cache:", error);
+                return null;
+            }
+        }
+
+        return cachedData;
+    }
+
+    async clearCache(): Promise<void> {
+        const cacheKey = `${this.runtime.character.name}/simplehash-data`;
+        await this.runtime.cacheManager?.delete(cacheKey);
     }
 }
 
@@ -309,14 +403,16 @@ export const simpleHashProvider: Provider = {
             return null;
         }
 
+        elizaLogger.info("SimpleHash provider triggered");
+
         try {
             const provider = new SimpleHashProvider(runtime);
-            const collections = await provider.getMarketTrends();
-            if (!collections) return null;
+            const data = await provider.getData();
+            if (!data) return null;
 
             return JSON.stringify({
-                collections,
-                timestamp: new Date().toISOString(),
+                collections: data.collections,
+                timestamp: new Date(data.lastUpdated).toISOString(),
             });
         } catch (error) {
             elizaLogger.error("Error in SimpleHash provider:", error);

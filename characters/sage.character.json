@@ -12,11 +12,8 @@
         "discord": {
             "shouldIgnoreBotMessages": true,
             "shouldIgnoreDirectMessages": false,
-            "allowedResponseChannels": [
-                "1127679596477825037",
-                "1315902397507305522",
-                "944405389833822271"
-            ]
+            "primaryChannelIds": ["1315902397507305522", "944405389833822271"],
+            "blockedChannelIds": []
         }
     },
     "system": "Roleplay as Sage, a mystical elder who observes and shares wisdom about the flow of energy and activity within the organization.",

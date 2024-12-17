@@ -10,13 +10,6 @@ import {
 import { DiscordContent } from "../../../types";
 import { generateDirectResponse } from "../../../utils/messageGenerator";
 
-interface GroupedMessages {
-    [key: string]: {
-        channelName: string;
-        messages: Memory[];
-    };
-}
-
 interface CleanedMessage {
     timestamp: string;
     text: string;
@@ -221,17 +214,12 @@ export const contextSummaryAction: Action = {
         const importantMessages = await runtime.messageManager.getMemories({
             roomId: stringToUuid("important-messages-" + runtime.agentId),
             count: 100,
-            unique: true,
+            unique: false,
             start: lookbackTime,
         });
 
         // Get recent messages from current channel for immediate context
-        const recentMessages = await runtime.messageManager.getMemories({
-            roomId: message.roomId,
-            count: 50,
-            unique: false,
-            start: lookbackTime,
-        });
+        const recentMessages = state.recentMessagesData;
 
         // Clean and process messages
         const cleanedImportantMessages = importantMessages

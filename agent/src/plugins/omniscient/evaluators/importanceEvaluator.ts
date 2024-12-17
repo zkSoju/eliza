@@ -309,7 +309,13 @@ export const importanceEvaluator: Evaluator = {
                     createdAt: message.createdAt,
                 };
 
+                await runtime.ensureRoomExists(globalMemory.roomId);
                 await runtime.messageManager.createMemory(globalMemory);
+
+                // If message is important, store it in agent's global memory
+                if (analysis.importance >= 8) {
+                    await runtime.messageManager.createMemory(message, true);
+                }
 
                 // Cache the importance analysis
                 const cacheKey = `${runtime.character.name}/message-importance/${message.id}`;

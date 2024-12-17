@@ -121,7 +121,7 @@ export const marketDataRefreshAction: Action = {
             elizaLogger.info("Starting market data refresh");
 
             const simpleHash = new SimpleHashProvider(runtime);
-            const marketData = await simpleHash.getMarketTrends();
+            const marketData = await simpleHash.getData();
 
             if (!marketData) {
                 elizaLogger.error("Failed to fetch market data");
@@ -132,7 +132,7 @@ export const marketDataRefreshAction: Action = {
             const previousAnalysis = await runtime.messageManager.getMemories({
                 roomId: stringToUuid("market-trends-" + runtime.agentId),
                 count: 1,
-                unique: true,
+                unique: false,
             });
 
             // Process each collection using AI
@@ -190,7 +190,8 @@ export const marketDataRefreshAction: Action = {
                 createdAt: Date.now(),
             };
 
-            await runtime.messageManager.createMemory(globalMemory, true);
+            await runtime.ensureRoomExists(globalMemory.roomId);
+            await runtime.messageManager.createMemory(globalMemory);
             elizaLogger.info("Market data and insights stored in memory", {
                 collections: processedInsights.length,
                 timestamp: new Date().toISOString(),

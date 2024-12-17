@@ -42,8 +42,9 @@ export type InterestChannels = {
 interface DiscordClientConfig {
     shouldIgnoreBotMessages?: boolean;
     shouldIgnoreDirectMessages?: boolean;
-    allowedResponseChannels?: string[];
     allowedRoles?: string[];
+    primaryChannelIds?: string[];
+    blockedChannelIds?: string[];
 }
 
 export class MessageManager {
@@ -71,9 +72,7 @@ export class MessageManager {
         const channelId = message.channel.id;
 
         // Early check for response permissions - but continue processing for memory
-        const canRespond =
-            !config?.allowedResponseChannels?.length ||
-            config.allowedResponseChannels.includes(channelId);
+        const canRespond = !config.blockedChannelIds.includes(channelId);
 
         try {
             // Process message and store memory regardless of response permissions
@@ -273,6 +272,11 @@ export class MessageManager {
                 agentName:
                     this.runtime.character.name ||
                     this.client.user?.displayName,
+                roomType: config?.primaryChannelIds?.includes(
+                    message.channel.id
+                )
+                    ? "primary"
+                    : "public",
             });
 
             const canSendResult = canSendMessage(message.channel);
@@ -286,9 +290,9 @@ export class MessageManager {
             let shouldIgnore = false;
             let shouldRespond = true;
 
-            if (config?.allowedResponseChannels?.length) {
+            if (config?.blockedChannelIds?.length) {
                 const channelId = message.channel.id;
-                if (!config.allowedResponseChannels.includes(channelId)) {
+                if (config.blockedChannelIds.includes(channelId)) {
                     elizaLogger.debug(
                         `Ignoring message from non-allowed channel ${channelId}`
                     );
@@ -424,12 +428,12 @@ export class MessageManager {
                 state = await this.runtime.updateRecentMessageState(state);
 
                 // If agent has allowed response channels, check if message is in them and ignore if not. This still allows agent to process messages in other channels
-                if (config?.allowedResponseChannels?.length) {
+                if (config?.blockedChannelIds?.length) {
                     const channelId = message.channel.id;
 
-                    if (!config.allowedResponseChannels.includes(channelId)) {
+                    if (config.blockedChannelIds.includes(channelId)) {
                         elizaLogger.debug(
-                            `Ignoring message from non-allowed channel ${channelId}`
+                            `Ignoring message from blocked channel ${channelId}`
                         );
                         return;
                     }
