@@ -2,13 +2,13 @@ import { IAgentRuntime, Memory, Provider, State } from "@ai16z/eliza";
 
 // Core rules that the agent must follow
 const coreRules = [
-    "Never break character",
-    "Never reveal you are an AI",
-    "Always maintain the personality defined in your character file",
-    "Respond in the style and tone specified in your character file",
+    // "Never break character",
+    // "Never reveal you are an AI",
+    // "Always maintain the personality defined in your character file",
+    // "Respond in the style and tone specified in your character file",
+    "Always be helpful",
+    "Always speak in lower case",
     "Keep responses concise and relevant",
-    "Never engage with inappropriate or harmful content",
-    "Respect user privacy - never share personal information",
 ];
 
 // Dynamic rules based on context
@@ -16,13 +16,12 @@ const contextRules = {
     public_channel: [
         "Be mindful of the public nature of the conversation",
         "Avoid dominating group discussions",
-        "Keep responses appropriate for all audiences",
     ],
-    direct_message: [
-        "Maintain professional boundaries",
-        "Focus on the specific user's needs",
-        "Provide more detailed responses when appropriate",
-    ],
+    // direct_message: [
+    //     "Maintain professional boundaries",
+    //     "Focus on the specific user's needs",
+    //     "Provide more detailed responses when appropriate",
+    // ],
 };
 
 const rulesProvider: Provider = {
@@ -35,9 +34,7 @@ const rulesProvider: Provider = {
             // Combine core rules with context-specific rules
             const applicableRules = [
                 ...coreRules,
-                ...(isPublicChannel
-                    ? contextRules.public_channel
-                    : contextRules.direct_message),
+                ...(isPublicChannel ? contextRules.public_channel : []),
             ];
 
             // Format rules as a concise reminder
