@@ -2,7 +2,7 @@ import { PostgresDatabaseAdapter } from "@ai16z/adapter-postgres";
 import { SqliteDatabaseAdapter } from "@ai16z/adapter-sqlite";
 import { AutoClientInterface } from "@ai16z/client-auto";
 import { DirectClientInterface } from "@ai16z/client-direct";
-import { DiscordClient, DiscordClientInterface } from "@ai16z/client-discord";
+import { DiscordClientInterface } from "@ai16z/client-discord";
 import { TelegramClientInterface } from "@ai16z/client-telegram";
 import { TwitterClientInterface } from "@ai16z/client-twitter";
 import {
@@ -39,7 +39,6 @@ import { createNodePlugin } from "@ai16z/plugin-node";
 import { teePlugin } from "@ai16z/plugin-tee";
 import Database from "better-sqlite3";
 import fs from "fs";
-import { schedule } from "node-cron";
 import path from "path";
 import readline from "readline";
 import { fileURLToPath } from "url";
@@ -494,31 +493,28 @@ async function startAgent(character: Character, directClient) {
 
         // Set up cron jobs for Discord clients
         clients.forEach((client) => {
-            elizaLogger.info("Client: ", character.name);
-            if (client instanceof DiscordClient && character.name === "Sage") {
-                elizaLogger.info("Setting up cron jobs for Sage");
-
-                const cronSchedule =
-                    process.env.NODE_ENV === "development"
-                        ? "*/1 * * * *" // Every minute in dev
-                        : "0 9 * * *"; // 9 AM every day in prod
-
-                // Daily summary
-                schedule(cronSchedule, () => {
-                    client.triggerSystemAction(
-                        THJ_CAVE_GENERAL_CHANNEL_ID,
-                        "DAILY_SUMMARY"
-                    );
-                });
-
-                // Market data refresh - run before daily summary
-                schedule(cronSchedule, () => {
-                    client.triggerSystemAction(
-                        TEST_GENERAL_CHANNEL_ID,
-                        "REFRESH_MARKET_DATA"
-                    );
-                });
-            }
+            // elizaLogger.info("Client: ", character.name);
+            // if (client instanceof DiscordClient && character.name === "Sage") {
+            //     elizaLogger.info("Setting up cron jobs for Sage");
+            //     const cronSchedule =
+            //         process.env.NODE_ENV === "development"
+            //             ? "*/1 * * * *" // Every minute in dev
+            //             : "0 9 * * *"; // 9 AM every day in prod
+            //     // Daily summary
+            //     schedule(cronSchedule, () => {
+            //         client.triggerSystemAction(
+            //             THJ_CAVE_GENERAL_CHANNEL_ID,
+            //             "DAILY_SUMMARY"
+            //         );
+            //     });
+            //     // Market data refresh - run before daily summary
+            //     schedule(cronSchedule, () => {
+            //         client.triggerSystemAction(
+            //             TEST_GENERAL_CHANNEL_ID,
+            //             "REFRESH_MARKET_DATA"
+            //         );
+            //     });
+            // }
         });
 
         directClient.registerAgent(runtime);
