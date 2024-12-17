@@ -503,7 +503,7 @@ async function startAgent(character: Character, directClient) {
                 const cronSchedule =
                     process.env.NODE_ENV === "development"
                         ? "*/1 * * * *" // Every minute in dev
-                        : "0 9 * * 1"; // 9 AM every Monday in prod
+                        : "0 9 * * *"; // 9 AM every day in prod
 
                 // Daily summary
                 schedule(cronSchedule, () => {
