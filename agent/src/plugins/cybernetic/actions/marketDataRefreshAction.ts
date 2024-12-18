@@ -2,7 +2,7 @@ import {
     Action,
     composeContext,
     elizaLogger,
-    generateObjectV2,
+    generateObject,
     HandlerCallback,
     IAgentRuntime,
     Memory,
@@ -160,7 +160,7 @@ export const marketDataRefreshAction: Action = {
                             template: marketAnalysisTemplate,
                         });
 
-                        const result = await generateObjectV2({
+                        const result = await generateObject({
                             runtime,
                             context,
                             modelClass: ModelClass.SMALL,

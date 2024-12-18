@@ -6,7 +6,7 @@ import {
     State,
     composeContext,
     elizaLogger,
-    generateObjectV2,
+    generateObject,
     stringToUuid,
 } from "@ai16z/eliza";
 import { z } from "zod";
@@ -278,7 +278,7 @@ export const importanceEvaluator: Evaluator = {
                 template: importanceTemplate,
             });
 
-            const result = await generateObjectV2({
+            const result = await generateObject({
                 runtime,
                 context,
                 modelClass: ModelClass.SMALL,

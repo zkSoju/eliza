@@ -1,10 +1,10 @@
 import {
-    getEmbeddingZeroVector,
-    stringToUuid,
-    elizaLogger,
     Character,
     Client as ElizaClient,
+    elizaLogger,
+    getEmbeddingZeroVector,
     IAgentRuntime,
+    stringToUuid,
 } from "@ai16z/eliza";
 import {
     Client,
@@ -13,6 +13,7 @@ import {
     Guild,
     MessageReaction,
     Partials,
+    PermissionsBitField,
     User,
 } from "discord.js";
 import { EventEmitter } from "events";
@@ -26,7 +27,6 @@ import { MessageManager } from "./messages.ts";
 import channelStateProvider from "./providers/channelState.ts";
 import voiceStateProvider from "./providers/voiceState.ts";
 import { VoiceManager } from "./voice.ts";
-import { PermissionsBitField } from "discord.js";
 
 export class DiscordClient extends EventEmitter {
     apiToken: string;
@@ -39,7 +39,11 @@ export class DiscordClient extends EventEmitter {
     constructor(runtime: IAgentRuntime) {
         super();
 
-        this.apiToken = runtime.getSetting("DISCORD_API_TOKEN") as string;
+        this.apiToken =
+            runtime.getSetting("DISCORD_API_TOKEN") ||
+            process.env[
+                `${runtime.character.name.toUpperCase()}_DISCORD_API_TOKEN`
+            ];
         this.client = new Client({
             intents: [
                 GatewayIntentBits.Guilds,
@@ -117,11 +121,11 @@ export class DiscordClient extends EventEmitter {
 
     async stop() {
         try {
-          // disconnect websocket
-          // this unbinds all the listeners
-          await this.client.destroy();
-        } catch(e) {
-          elizaLogger.error('client-discord instance stop err', e);
+            // disconnect websocket
+            // this unbinds all the listeners
+            await this.client.destroy();
+        } catch (e) {
+            elizaLogger.error("client-discord instance stop err", e);
         }
     }
 
@@ -404,11 +408,11 @@ export const DiscordClientInterface: ElizaClient = {
     start: async (runtime: IAgentRuntime) => new DiscordClient(runtime),
     stop: async (runtime: IAgentRuntime) => {
         try {
-          // stop it
-          elizaLogger.log('Stopping discord client', runtime.agentId)
-          await runtime.clients.discord.stop()
-        } catch(e) {
-          elizaLogger.error('client-discord interface stop error', e);
+            // stop it
+            elizaLogger.log("Stopping discord client", runtime.agentId);
+            await runtime.clients.discord.stop();
+        } catch (e) {
+            elizaLogger.error("client-discord interface stop error", e);
         }
     },
 };

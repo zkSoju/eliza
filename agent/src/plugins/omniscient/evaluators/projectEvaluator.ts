@@ -5,7 +5,7 @@ import {
     ModelClass,
     State,
     composeContext,
-    generateObjectV2,
+    generateObject,
 } from "@ai16z/eliza";
 import { z } from "zod";
 import { OmniscientProvider } from "../providers/omniscientProvider";
@@ -55,7 +55,7 @@ export const projectEvaluator: Evaluator = {
                 template: projectExtractTemplate,
             });
 
-            const content = await generateObjectV2({
+            const content = await generateObject({
                 runtime,
                 context,
                 modelClass: ModelClass.SMALL,

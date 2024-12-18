@@ -2,7 +2,7 @@ import {
     Action,
     composeContext,
     elizaLogger,
-    generateObjectV2,
+    generateObject,
     HandlerCallback,
     IAgentRuntime,
     Memory,
@@ -87,7 +87,7 @@ export const socialManagementAction: Action = {
             });
 
             // Generate and validate social content
-            const content = await generateObjectV2({
+            const content = await generateObject({
                 runtime,
                 context,
                 modelClass: ModelClass.SMALL,

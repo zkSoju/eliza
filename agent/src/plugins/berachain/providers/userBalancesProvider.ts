@@ -3,7 +3,7 @@ import {
     ActionExample,
     composeContext,
     Content,
-    generateObjectV2,
+    generateObject,
     HandlerCallback,
     IAgentRuntime,
     Memory,
@@ -67,7 +67,7 @@ export const checkUserBalanceAction: Action = {
             });
 
             // Generate balance check content
-            const content = await generateObjectV2({
+            const content = await generateObject({
                 runtime,
                 context: balanceContext,
                 modelClass: ModelClass.SMALL,

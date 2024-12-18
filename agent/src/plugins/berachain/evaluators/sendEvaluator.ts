@@ -5,7 +5,7 @@ import {
     ModelClass,
     State,
     composeContext,
-    generateObjectV2,
+    generateObject,
 } from "@ai16z/eliza";
 import { z } from "zod";
 
@@ -231,7 +231,7 @@ Follow-up with amount only`,
             });
 
             // Use safeParse instead of direct validation
-            const content = await generateObjectV2({
+            const content = await generateObject({
                 runtime,
                 context: sendContext,
                 modelClass: ModelClass.SMALL,

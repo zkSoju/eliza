@@ -5,7 +5,7 @@ import {
     ModelClass,
     State,
     composeContext,
-    generateObjectV2,
+    generateObject,
 } from "@ai16z/eliza";
 import { z } from "zod";
 import { DiscordContent } from "../../../types";
@@ -168,7 +168,7 @@ export const roleEvaluator: Evaluator = {
                 template: roleTemplate,
             });
 
-            const result = await generateObjectV2({
+            const result = await generateObject({
                 runtime,
                 context: roleContext,
                 modelClass: ModelClass.SMALL,

@@ -2,7 +2,7 @@ import {
     composeContext,
     elizaLogger,
     Evaluator,
-    generateObjectV2,
+    generateObject,
     IAgentRuntime,
     Memory,
     ModelClass,
@@ -116,7 +116,7 @@ export const conversationAnalysisEvaluator: Evaluator = {
                 template: conversationTemplate,
             });
 
-            const result = await generateObjectV2({
+            const result = await generateObject({
                 runtime,
                 context,
                 modelClass: ModelClass.SMALL,

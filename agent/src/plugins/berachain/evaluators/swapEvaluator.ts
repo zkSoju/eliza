@@ -5,7 +5,7 @@ import {
     ModelClass,
     State,
     composeContext,
-    generateObjectV2,
+    generateObject,
 } from "@ai16z/eliza";
 import { z } from "zod";
 import { SwapContent, SwapSchema } from "../../../types";
@@ -286,7 +286,7 @@ Follow-up swap request with new amount`,
                     template: confirmationTemplate,
                 });
 
-                const confirmation = await generateObjectV2({
+                const confirmation = await generateObject({
                     runtime,
                     context: confirmContext,
                     modelClass: ModelClass.SMALL,
@@ -326,7 +326,7 @@ Follow-up swap request with new amount`,
                 template: swapTemplate,
             });
 
-            const content = await generateObjectV2({
+            const content = await generateObject({
                 runtime,
                 context: swapContext,
                 modelClass: ModelClass.SMALL,

@@ -5,13 +5,13 @@ import {
     Memory,
     ModelClass,
     State,
-    elizaLogger,
-    generateObjectV2,
     composeContext,
+    elizaLogger,
+    generateObject,
     stringToUuid,
 } from "@ai16z/eliza";
-import { generateDirectResponse } from "../../../utils/messageGenerator";
 import { z } from "zod";
+import { generateDirectResponse } from "../../../utils/messageGenerator";
 
 const CommunityInsightSchema = z.object({
     overview: z.object({
@@ -20,22 +20,28 @@ const CommunityInsightSchema = z.object({
         engagement_score: z.number(),
         sentiment_summary: z.string(),
     }),
-    topics: z.array(z.object({
-        name: z.string(),
-        frequency: z.number(),
-        engagement_level: z.number(),
-        sentiment: z.string(),
-    })),
-    patterns: z.array(z.object({
-        type: z.string(),
-        description: z.string(),
-        significance: z.number().min(1).max(10),
-    })),
-    member_dynamics: z.array(z.object({
-        pattern: z.string(),
-        impact: z.string(),
-        suggestion: z.string(),
-    })),
+    topics: z.array(
+        z.object({
+            name: z.string(),
+            frequency: z.number(),
+            engagement_level: z.number(),
+            sentiment: z.string(),
+        })
+    ),
+    patterns: z.array(
+        z.object({
+            type: z.string(),
+            description: z.string(),
+            significance: z.number().min(1).max(10),
+        })
+    ),
+    member_dynamics: z.array(
+        z.object({
+            pattern: z.string(),
+            impact: z.string(),
+            suggestion: z.string(),
+        })
+    ),
     actionable_insights: z.array(z.string()),
 });
 
@@ -91,7 +97,8 @@ Response Format:
 
 export const communityInsightAction: Action = {
     name: "ANALYZE_COMMUNITY",
-    description: "Analyzes community conversations and provides actionable insights",
+    description:
+        "Analyzes community conversations and provides actionable insights",
     similes: ["COMMUNITY_INSIGHT", "CONVERSATION_ANALYSIS", "COMMUNITY_HEALTH"],
     examples: [
         [
@@ -141,7 +148,7 @@ export const communityInsightAction: Action = {
                 template: communityAnalysisTemplate,
             });
 
-            const result = await generateObjectV2({
+            const result = await generateObject({
                 runtime,
                 context,
                 modelClass: ModelClass.SMALL,

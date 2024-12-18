@@ -8,7 +8,7 @@ import type {
 import {
     composeContext,
     elizaLogger,
-    generateObjectV2,
+    generateObject,
     ModelClass,
 } from "@ai16z/eliza";
 import { z } from "zod";
@@ -83,7 +83,7 @@ export const balanceAction: Action = {
             });
 
             // Generate and validate balance content
-            const content = await generateObjectV2({
+            const content = await generateObject({
                 runtime,
                 context: balanceContext,
                 modelClass: ModelClass.SMALL,

@@ -40,7 +40,6 @@ import {
     webhookPlugin,
 } from "@ai16z/plugin-coinbase";
 import { confluxPlugin } from "@ai16z/plugin-conflux";
-import { evmPlugin } from "@ai16z/plugin-evm";
 import { flowPlugin } from "@ai16z/plugin-flow";
 import { imageGenerationPlugin } from "@ai16z/plugin-image-generation";
 import { multiversxPlugin } from "@ai16z/plugin-multiversx";
@@ -639,30 +638,30 @@ async function startAgent(
         const TEST_GENERAL_CHANNEL_ID = "944405389833822271";
 
         // Set up cron jobs for Discord clients
-        runtime.clients.forEach((client) => {
-            // elizaLogger.info("Client: ", character.name);
-            // if (client instanceof DiscordClient && character.name === "Sage") {
-            //     elizaLogger.info("Setting up cron jobs for Sage");
-            //     const cronSchedule =
-            //         process.env.NODE_ENV === "development"
-            //             ? "*/1 * * * *" // Every minute in dev
-            //             : "0 9 * * *"; // 9 AM every day in prod
-            //     // Daily summary
-            //     schedule(cronSchedule, () => {
-            //         client.triggerSystemAction(
-            //             THJ_CAVE_GENERAL_CHANNEL_ID,
-            //             "DAILY_SUMMARY"
-            //         );
-            //     });
-            //     // Market data refresh - run before daily summary
-            //     schedule(cronSchedule, () => {
-            //         client.triggerSystemAction(
-            //             TEST_GENERAL_CHANNEL_ID,
-            //             "REFRESH_MARKET_DATA"
-            //         );
-            //     });
-            // }
-        });
+        // runtime.clients.forEach((client) => {
+        //     // elizaLogger.info("Client: ", character.name);
+        //     // if (client instanceof DiscordClient && character.name === "Sage") {
+        //     //     elizaLogger.info("Setting up cron jobs for Sage");
+        //     //     const cronSchedule =
+        //     //         process.env.NODE_ENV === "development"
+        //     //             ? "*/1 * * * *" // Every minute in dev
+        //     //             : "0 9 * * *"; // 9 AM every day in prod
+        //     //     // Daily summary
+        //     //     schedule(cronSchedule, () => {
+        //     //         client.triggerSystemAction(
+        //     //             THJ_CAVE_GENERAL_CHANNEL_ID,
+        //     //             "DAILY_SUMMARY"
+        //     //         );
+        //     //     });
+        //     //     // Market data refresh - run before daily summary
+        //     //     schedule(cronSchedule, () => {
+        //     //         client.triggerSystemAction(
+        //     //             TEST_GENERAL_CHANNEL_ID,
+        //     //             "REFRESH_MARKET_DATA"
+        //     //         );
+        //     //     });
+        //     // }
+        // });
 
         // add to container
         directClient.registerAgent(runtime);
