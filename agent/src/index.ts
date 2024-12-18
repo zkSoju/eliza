@@ -54,6 +54,7 @@ import { tonPlugin } from "@ai16z/plugin-ton";
 import { zksyncEraPlugin } from "@ai16z/plugin-zksync-era";
 import Database from "better-sqlite3";
 import fs from "fs";
+import { schedule } from "node-cron";
 import path from "path";
 import { fileURLToPath } from "url";
 import yargs from "yargs";
@@ -524,11 +525,11 @@ export async function createAgent(
             getSecret(character, "NEAR_WALLET_SECRET_KEY")
                 ? nearPlugin
                 : null,
-            getSecret(character, "EVM_PUBLIC_KEY") ||
-            (getSecret(character, "WALLET_PUBLIC_KEY") &&
-                getSecret(character, "WALLET_PUBLIC_KEY")?.startsWith("0x"))
-                ? evmPlugin
-                : null,
+            // getSecret(character, "EVM_PUBLIC_KEY") ||
+            // (getSecret(character, "WALLET_PUBLIC_KEY") &&
+            //     getSecret(character, "WALLET_PUBLIC_KEY")?.startsWith("0x"))
+            //     ? evmPlugin
+            //     : null,
             (getSecret(character, "SOLANA_PUBLIC_KEY") ||
                 (getSecret(character, "WALLET_PUBLIC_KEY") &&
                     !getSecret(character, "WALLET_PUBLIC_KEY")?.startsWith(
@@ -638,30 +639,28 @@ async function startAgent(
         const TEST_GENERAL_CHANNEL_ID = "944405389833822271";
 
         // Set up cron jobs for Discord clients
-        // runtime.clients.forEach((client) => {
-        //     // elizaLogger.info("Client: ", character.name);
-        //     // if (client instanceof DiscordClient && character.name === "Sage") {
-        //     //     elizaLogger.info("Setting up cron jobs for Sage");
-        //     //     const cronSchedule =
-        //     //         process.env.NODE_ENV === "development"
-        //     //             ? "*/1 * * * *" // Every minute in dev
-        //     //             : "0 9 * * *"; // 9 AM every day in prod
-        //     //     // Daily summary
-        //     //     schedule(cronSchedule, () => {
-        //     //         client.triggerSystemAction(
-        //     //             THJ_CAVE_GENERAL_CHANNEL_ID,
-        //     //             "DAILY_SUMMARY"
-        //     //         );
-        //     //     });
-        //     //     // Market data refresh - run before daily summary
-        //     //     schedule(cronSchedule, () => {
-        //     //         client.triggerSystemAction(
-        //     //             TEST_GENERAL_CHANNEL_ID,
-        //     //             "REFRESH_MARKET_DATA"
-        //     //         );
-        //     //     });
-        //     // }
-        // });
+        elizaLogger.info("Client: ", character.name);
+        if (character.name === "Sage") {
+            elizaLogger.info("Setting up cron jobs for Sage");
+            const cronSchedule =
+                process.env.NODE_ENV === "development"
+                    ? "*/1 * * * *" // Every minute in dev
+                    : "0 9 * * *"; // 9 AM every day in prod
+            // Daily summary
+            schedule(cronSchedule, () => {
+                runtime.clients.discord.triggerSystemAction(
+                    THJ_CAVE_GENERAL_CHANNEL_ID,
+                    "DAILY_SUMMARY"
+                );
+            });
+            // Market data refresh - run before daily summary
+            schedule(cronSchedule, () => {
+                runtime.clients.discord.triggerSystemAction(
+                    TEST_GENERAL_CHANNEL_ID,
+                    "REFRESH_MARKET_DATA"
+                );
+            });
+        }
 
         // add to container
         directClient.registerAgent(runtime);
