@@ -1,7 +1,10 @@
-import { composeContext } from "@ai16z/eliza";
-import { generateMessageResponse, generateShouldRespond } from "@ai16z/eliza";
 import {
+    composeContext,
     Content,
+    elizaLogger,
+    generateMessageResponse,
+    generateShouldRespond,
+    getEmbeddingZeroVector,
     HandlerCallback,
     IAgentRuntime,
     IBrowserService,
@@ -12,22 +15,16 @@ import {
     ModelClass,
     ServiceType,
     State,
+    stringToUuid,
     UUID,
 } from "@ai16z/eliza";
-import { stringToUuid, getEmbeddingZeroVector } from "@ai16z/eliza";
 import {
     ChannelType,
     Client,
     Message as DiscordMessage,
     TextChannel,
 } from "discord.js";
-import { elizaLogger } from "@ai16z/eliza";
 import { AttachmentManager } from "./attachments.ts";
-import { VoiceManager } from "./voice.ts";
-import {
-    discordShouldRespondTemplate,
-    discordMessageHandlerTemplate,
-} from "./templates.ts";
 import {
     IGNORE_RESPONSE_WORDS,
     LOSE_INTEREST_WORDS,
@@ -38,10 +35,15 @@ import {
     TIMING_CONSTANTS,
 } from "./constants";
 import {
-    sendMessageInChunks,
+    discordMessageHandlerTemplate,
+    discordShouldRespondTemplate,
+} from "./templates.ts";
+import {
     canSendMessage,
     cosineSimilarity,
+    sendMessageInChunks,
 } from "./utils.ts";
+import { VoiceManager } from "./voice.ts";
 
 interface MessageContext {
     content: string;
@@ -57,6 +59,14 @@ export type InterestChannels = {
         contextSimilarityThreshold?: number;
     };
 };
+
+interface DiscordClientConfig {
+    shouldIgnoreBotMessages?: boolean;
+    shouldIgnoreDirectMessages?: boolean;
+    allowedRoles?: string[];
+    primaryChannelIds?: string[];
+    blockedChannelIds?: string[];
+}
 
 export class MessageManager {
     private client: Client;
@@ -112,6 +122,8 @@ export class MessageManager {
         const userId = message.author.id as UUID;
         const userName = message.author.username;
         const name = message.author.displayName;
+        const config = this.runtime.character.clientConfig
+            ?.discord as DiscordClientConfig;
         const channelId = message.channel.id;
         const isDirectlyMentioned = this._isMessageForMe(message);
         const hasInterest = this._checkInterest(message.channelId);
@@ -242,7 +254,11 @@ export class MessageManager {
             }
         }
 
+        // Early check for response permissions - but continue processing for memory
+        const canRespond = !config.blockedChannelIds.includes(channelId);
+
         try {
+            // Process message and store memory regardless of response permissions
             const { processedContent, attachments } =
                 await this.processMessageMedia(message);
 
@@ -258,13 +274,13 @@ export class MessageManager {
             }
 
             const roomId = stringToUuid(channelId + "-" + this.runtime.agentId);
-            const userIdUUID = stringToUuid(userId);
+            const userIdUUID = stringToUuid(message.author.id);
 
             await this.runtime.ensureConnection(
                 userIdUUID,
                 roomId,
-                userName,
-                name,
+                message.author.username,
+                message.author.displayName,
                 "discord"
             );
 
@@ -272,25 +288,77 @@ export class MessageManager {
                 message.id + "-" + this.runtime.agentId
             );
 
-            let shouldIgnore = false;
-            let shouldRespond = true;
-
-            const content: Content = {
-                text: processedContent,
-                attachments: attachments,
-                source: "discord",
-                url: message.url,
-                inReplyTo: message.reference?.messageId
-                    ? stringToUuid(
-                          message.reference.messageId +
-                              "-" +
-                              this.runtime.agentId
-                      )
-                    : undefined,
-            };
-
             const userMessage = {
-                content,
+                content: {
+                    text: processedContent,
+                    attachments: attachments,
+                    source: "discord",
+                    url: message.url,
+                    user: message.author.id,
+                    userName: message.author.username,
+                    roles:
+                        message.member?.roles.cache.map((role) => ({
+                            id: role.id,
+                            name: role.name,
+                            color: role.color,
+                        })) || [],
+                    inReplyTo: message.reference?.messageId
+                        ? stringToUuid(
+                              message.reference.messageId +
+                                  "-" +
+                                  this.runtime.agentId
+                          )
+                        : undefined,
+                    channelInfo: {
+                        id: message.channel.id,
+                        name:
+                            "name" in message.channel
+                                ? message.channel.name
+                                : "DM",
+                        type: message.channel.type,
+                        ...(message.channel.type !== ChannelType.DM &&
+                            message.guild && {
+                                isThread:
+                                    "isThread" in message.channel
+                                        ? message.channel.isThread()
+                                        : false,
+                                // For threads, parent is the channel. For channels, parent is the category
+                                parentId:
+                                    (message.channel as TextChannel).parentId ||
+                                    undefined,
+                                parentName:
+                                    (message.channel as TextChannel).parent
+                                        ?.name || undefined,
+                                // Get category info from guild channels cache
+                                categoryId:
+                                    message.guild.channels.cache.find(
+                                        (c) =>
+                                            c.type ===
+                                                ChannelType.GuildCategory &&
+                                            (c.id ===
+                                                (message.channel as TextChannel)
+                                                    .parentId ||
+                                                c.id ===
+                                                    (
+                                                        message.channel as TextChannel
+                                                    ).parent?.parentId)
+                                    )?.id || undefined,
+                                categoryName:
+                                    message.guild.channels.cache.find(
+                                        (c) =>
+                                            c.type ===
+                                                ChannelType.GuildCategory &&
+                                            (c.id ===
+                                                (message.channel as TextChannel)
+                                                    .parentId ||
+                                                c.id ===
+                                                    (
+                                                        message.channel as TextChannel
+                                                    ).parent?.parentId)
+                                    )?.name || undefined,
+                            }),
+                    },
+                },
                 userId: userIdUUID,
                 agentId: this.runtime.agentId,
                 roomId,
@@ -302,11 +370,81 @@ export class MessageManager {
                 userId: userIdUUID,
                 agentId: this.runtime.agentId,
                 roomId,
-                content,
+                content: {
+                    text: processedContent,
+                    attachments: attachments,
+                    source: "discord",
+                    url: message.url,
+                    user: message.author.id,
+                    userName: message.author.username,
+                    roles:
+                        message.member?.roles.cache.map((role) => ({
+                            id: role.id,
+                            name: role.name,
+                            color: role.color,
+                        })) || [],
+                    inReplyTo: message.reference?.messageId
+                        ? stringToUuid(
+                              message.reference.messageId +
+                                  "-" +
+                                  this.runtime.agentId
+                          )
+                        : undefined,
+                    channelInfo: {
+                        id: message.channel.id,
+                        name:
+                            "name" in message.channel
+                                ? message.channel.name
+                                : "DM",
+                        type: message.channel.type,
+                        ...(message.channel.type !== ChannelType.DM &&
+                            message.guild && {
+                                isThread:
+                                    "isThread" in message.channel
+                                        ? message.channel.isThread()
+                                        : false,
+                                // For threads, parent is the channel. For channels, parent is the category
+                                parentId:
+                                    (message.channel as TextChannel).parentId ||
+                                    undefined,
+                                parentName:
+                                    (message.channel as TextChannel).parent
+                                        ?.name || undefined,
+                                // Get category info from guild channels cache
+                                categoryId:
+                                    message.guild.channels.cache.find(
+                                        (c) =>
+                                            c.type ===
+                                                ChannelType.GuildCategory &&
+                                            (c.id ===
+                                                (message.channel as TextChannel)
+                                                    .parentId ||
+                                                c.id ===
+                                                    (
+                                                        message.channel as TextChannel
+                                                    ).parent?.parentId)
+                                    )?.id || undefined,
+                                categoryName:
+                                    message.guild.channels.cache.find(
+                                        (c) =>
+                                            c.type ===
+                                                ChannelType.GuildCategory &&
+                                            (c.id ===
+                                                (message.channel as TextChannel)
+                                                    .parentId ||
+                                                c.id ===
+                                                    (
+                                                        message.channel as TextChannel
+                                                    ).parent?.parentId)
+                                    )?.name || undefined,
+                            }),
+                    },
+                },
                 createdAt: message.createdTimestamp,
+                embedding: getEmbeddingZeroVector(),
             };
 
-            if (content.text) {
+            if (memory.content.text) {
                 await this.runtime.messageManager.addEmbeddingToMemory(memory);
                 await this.runtime.messageManager.createMemory(memory);
 
@@ -315,7 +453,7 @@ export class MessageManager {
                     this.interestChannels[message.channelId].messages.push({
                         userId: userIdUUID,
                         userName: userName,
-                        content: content,
+                        content: memory.content,
                     });
 
                     // Trim to keep only recent messages
@@ -337,6 +475,11 @@ export class MessageManager {
                 agentName:
                     this.runtime.character.name ||
                     this.client.user?.displayName,
+                roomType: config?.primaryChannelIds?.includes(
+                    message.channel.id
+                )
+                    ? "primary"
+                    : "public",
             });
 
             const canSendResult = canSendMessage(message.channel);
@@ -345,6 +488,19 @@ export class MessageManager {
                     `Cannot send message to channel ${message.channel}`,
                     canSendResult
                 );
+            }
+
+            let shouldIgnore = false;
+            let shouldRespond = true;
+
+            if (config?.blockedChannelIds?.length) {
+                const channelId = message.channel.id;
+                if (config.blockedChannelIds.includes(channelId)) {
+                    elizaLogger.debug(
+                        `Ignoring message from non-allowed channel ${channelId}`
+                    );
+                    shouldRespond = false;
+                }
             }
 
             if (!shouldIgnore) {
@@ -406,7 +562,8 @@ export class MessageManager {
 
                 const callback: HandlerCallback = async (
                     content: Content,
-                    files: any[]
+                    files: any[],
+                    options?: { targetChannelId?: string }
                 ) => {
                     try {
                         if (message.id && !content.inReplyTo) {
@@ -414,8 +571,16 @@ export class MessageManager {
                                 message.id + "-" + this.runtime.agentId
                             );
                         }
+
+                        // Get target channel
+                        const targetChannel = options?.targetChannelId
+                            ? ((await this.client.channels.fetch(
+                                  options.targetChannelId
+                              )) as TextChannel)
+                            : (message.channel as TextChannel);
+
                         const messages = await sendMessageInChunks(
-                            message.channel as TextChannel,
+                            targetChannel,
                             content.text,
                             message.id,
                             files
@@ -465,6 +630,18 @@ export class MessageManager {
 
                 state = await this.runtime.updateRecentMessageState(state);
 
+                // If agent has allowed response channels, check if message is in them and ignore if not. This still allows agent to process messages in other channels
+                if (config?.blockedChannelIds?.length) {
+                    const channelId = message.channel.id;
+
+                    if (config.blockedChannelIds.includes(channelId)) {
+                        elizaLogger.debug(
+                            `Ignoring message from blocked channel ${channelId}`
+                        );
+                        return;
+                    }
+                }
+
                 await this.runtime.processActions(
                     memory,
                     responseMessages,
@@ -472,7 +649,13 @@ export class MessageManager {
                     callback
                 );
             }
-            await this.runtime.evaluate(memory, state, shouldRespond);
+
+            // Always evaluate the message even if we don't respond
+            await this.runtime.evaluate(
+                memory,
+                state,
+                canRespond && shouldRespond
+            );
         } catch (error) {
             console.error("Error handling message:", error);
             if (message.channel.type === ChannelType.GuildVoice) {
@@ -490,7 +673,10 @@ export class MessageManager {
                     this.runtime,
                     errorMessage
                 );
-                await this.voiceManager.playAudioStream(userId, audioStream);
+                await this.voiceManager.playAudioStream(
+                    this.runtime.agentId,
+                    audioStream
+                );
             } else {
                 // For text channels, send the error message
                 console.error("Error sending message:", error);
@@ -1306,5 +1492,80 @@ export class MessageManager {
 
         const data = await response.json();
         return data.username;
+    }
+
+    async handleSystemAction(targetChannelId: string, action: string) {
+        try {
+            // Find the first available text channel if target channel is not accessible
+            let channel: TextChannel | null = null;
+            try {
+                channel = (await this.client.channels.fetch(
+                    targetChannelId
+                )) as TextChannel;
+            } catch {
+                // If target channel not found, find first available text channel
+                for (const [, guild] of this.client.guilds.cache) {
+                    const textChannel = guild.channels.cache.find(
+                        (c) => c.isTextBased() && !c.isDMBased()
+                    ) as TextChannel;
+                    if (textChannel) {
+                        channel = textChannel;
+                        break;
+                    }
+                }
+            }
+
+            if (!channel) {
+                throw new Error("No suitable text channel found");
+            }
+
+            const systemId = stringToUuid(`system-${this.runtime.agentId}`);
+            const roomId = stringToUuid(
+                `${channel.id}-${this.runtime.agentId}`
+            );
+
+            const memory: Memory = {
+                id: stringToUuid(
+                    `${action}-${Date.now()}-${this.runtime.agentId}`
+                ),
+                userId: systemId,
+                agentId: this.runtime.agentId,
+                roomId,
+                content: {
+                    text: action,
+                    action,
+                    source: "discord",
+                },
+                createdAt: Date.now(),
+                embedding: getEmbeddingZeroVector(),
+            };
+
+            const callback: HandlerCallback = async (content: Content) => {
+                try {
+                    await sendMessageInChunks(channel!, content.text, "", []);
+                    return [];
+                } catch (error) {
+                    elizaLogger.error("Error sending system message:", error);
+                    return [];
+                }
+            };
+
+            const state = await this.runtime.composeState(memory, {
+                discordClient: this.client,
+                discordMessage: memory,
+                agentName:
+                    this.runtime.character.name ||
+                    this.client.user?.displayName,
+            });
+
+            await this.runtime.processActions(
+                memory,
+                [memory],
+                state,
+                callback
+            );
+        } catch (error) {
+            elizaLogger.error("Error in handleSystemAction:", error);
+        }
     }
 }

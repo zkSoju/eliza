@@ -41,7 +41,6 @@ import {
 } from "@ai16z/plugin-coinbase";
 import { confluxPlugin } from "@ai16z/plugin-conflux";
 import { evmPlugin } from "@ai16z/plugin-evm";
-import { storyPlugin } from "@ai16z/plugin-story";
 import { flowPlugin } from "@ai16z/plugin-flow";
 import { imageGenerationPlugin } from "@ai16z/plugin-image-generation";
 import { multiversxPlugin } from "@ai16z/plugin-multiversx";
@@ -49,6 +48,7 @@ import { nearPlugin } from "@ai16z/plugin-near";
 import { nftGenerationPlugin } from "@ai16z/plugin-nft-generation";
 import { createNodePlugin } from "@ai16z/plugin-node";
 import { solanaPlugin } from "@ai16z/plugin-solana";
+import { storyPlugin } from "@ai16z/plugin-story";
 import { suiPlugin } from "@ai16z/plugin-sui";
 import { TEEMode, teePlugin } from "@ai16z/plugin-tee";
 import { tonPlugin } from "@ai16z/plugin-ton";
@@ -58,6 +58,9 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import yargs from "yargs";
+import berachainPlugin from "./plugins/berachain/berachainPlugin";
+import cyberneticPlugin from "./plugins/cybernetic/cyberneticPlugin";
+import omniscientPlugin from "./plugins/omniscient/omniscientPlugin";
 
 const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
 const __dirname = path.dirname(__filename); // get the name of the directory
@@ -308,7 +311,26 @@ export function getTokenForProvider(
 }
 
 function initializeDatabase(dataDir: string) {
-    if (process.env.POSTGRES_URL) {
+    if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_API_KEY) {
+        elizaLogger.info("Initializing Supabase connection...");
+        // const db = new SupabaseDatabaseAdapter(
+        //     process.env.SUPABASE_URL,
+        //     process.env.SUPABASE_SERVICE_API_KEY
+        // );
+
+        // // Test the connection
+        // db.init()
+        //     .then(() => {
+        //         elizaLogger.success(
+        //             "Successfully connected to Supabase database"
+        //         );
+        //     })
+        //     .catch((error) => {
+        //         elizaLogger.error("Failed to connect to Supabase:", error);
+        //     });
+
+        return;
+    } else if (process.env.POSTGRES_URL) {
         elizaLogger.info("Initializing PostgreSQL connection...");
         const db = new PostgresDatabaseAdapter({
             connectionString: process.env.POSTGRES_URL,
@@ -436,7 +458,11 @@ function isFalsish(input: any): boolean {
 }
 
 function getSecret(character: Character, secret: string) {
-    return character.settings?.secrets?.[secret] || process.env[secret];
+    return (
+        character.settings.secrets?.[secret] ||
+        process.env[secret] ||
+        process.env[`${character.name.toUpperCase()}_${secret}`]
+    );
 }
 
 let nodePlugin: any | undefined;
@@ -482,6 +508,9 @@ export async function createAgent(
         // character.plugins are handled when clients are added
         plugins: [
             bootstrapPlugin,
+            cyberneticPlugin,
+            getSecret(character, "LINEAR_API_KEY") ? omniscientPlugin : null,
+            getSecret(character, "EVM_PRIVATE_KEY") ? berachainPlugin : null,
             getSecret(character, "CONFLUX_CORE_PRIVATE_KEY")
                 ? confluxPlugin
                 : null,
@@ -606,6 +635,35 @@ async function startAgent(
         // start assigned clients
         runtime.clients = await initializeClients(character, runtime);
 
+        const THJ_CAVE_GENERAL_CHANNEL_ID = "1127679596477825037";
+        const TEST_GENERAL_CHANNEL_ID = "944405389833822271";
+
+        // Set up cron jobs for Discord clients
+        runtime.clients.forEach((client) => {
+            // elizaLogger.info("Client: ", character.name);
+            // if (client instanceof DiscordClient && character.name === "Sage") {
+            //     elizaLogger.info("Setting up cron jobs for Sage");
+            //     const cronSchedule =
+            //         process.env.NODE_ENV === "development"
+            //             ? "*/1 * * * *" // Every minute in dev
+            //             : "0 9 * * *"; // 9 AM every day in prod
+            //     // Daily summary
+            //     schedule(cronSchedule, () => {
+            //         client.triggerSystemAction(
+            //             THJ_CAVE_GENERAL_CHANNEL_ID,
+            //             "DAILY_SUMMARY"
+            //         );
+            //     });
+            //     // Market data refresh - run before daily summary
+            //     schedule(cronSchedule, () => {
+            //         client.triggerSystemAction(
+            //             TEST_GENERAL_CHANNEL_ID,
+            //             "REFRESH_MARKET_DATA"
+            //         );
+            //     });
+            // }
+        });
+
         // add to container
         directClient.registerAgent(runtime);
 
@@ -636,6 +694,7 @@ const startAgents = async () => {
     let characters = [defaultCharacter];
 
     if (charactersArg) {
+        elizaLogger.log(charactersArg);
         characters = await loadCharacters(charactersArg);
     }
 
@@ -648,9 +707,9 @@ const startAgents = async () => {
     }
 
     // upload some agent functionality into directClient
-    directClient.startAgent = async character => {
-      // wrap it so we don't have to inject directClient later
-      return startAgent(character, directClient)
+    directClient.startAgent = async (character) => {
+        // wrap it so we don't have to inject directClient later
+        return startAgent(character, directClient);
     };
     directClient.start(serverPort);
 

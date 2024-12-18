@@ -1,0 +1,9 @@
+[build]
+builder = "NIXPACKS"
+buildCommand = "pnpm install"
+
+[deploy]
+startCommand = "pnpm start --character=\"characters/sage.character.json\""
+
+[deploy.envs]
+NODE_ENV = "production"
