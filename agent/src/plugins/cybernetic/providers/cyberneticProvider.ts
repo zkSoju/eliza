@@ -10,8 +10,10 @@ import {
 } from "@ai16z/eliza";
 import { createHash } from "crypto";
 import fs from "fs/promises";
-import { glob } from "glob";
+import pkg from "glob";
 import path from "path";
+
+const { glob } = pkg;
 
 export interface CyberneticProviderConfig {
     contextPath: string; // Path to markdown files directory
@@ -40,7 +42,12 @@ export class CyberneticKnowledgeManager {
         );
 
         try {
-            const files = await glob(searchPath, { nodir: true });
+            const files = await new Promise<string[]>((resolve, reject) => {
+                glob(searchPath, (err, matches) => {
+                    if (err) reject(err);
+                    resolve(matches);
+                });
+            });
 
             elizaLogger.log(
                 "Loading cybernetic knowledge from:",
