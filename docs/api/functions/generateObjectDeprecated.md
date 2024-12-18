@@ -1,8 +1,8 @@
-[@ai16z/eliza v0.1.5-alpha.5](../index.md) / generateObjectDeprecated
+[@ai16z/eliza v0.1.5-alpha.5](../index.md) / generateObjectDEPRECATED
 
-# Function: generateObjectDeprecated()
+# Function: generateObjectDEPRECATED()
 
-> **generateObjectDeprecated**(`__namedParameters`): `Promise`\<`any`\>
+> **generateObjectDEPRECATED**(`__namedParameters`): `Promise`\<`any`\>
 
 ## Parameters
 
@@ -20,4 +20,4 @@
 
 ## Defined in
 
-[packages/core/src/generation.ts:800](https://github.com/ai16z/eliza/blob/main/packages/core/src/generation.ts#L800)
+[packages/core/src/generation.ts:693](https://github.com/0xHoneyJar/thj-agents/blob/main/packages/core/src/generation.ts#L693)
