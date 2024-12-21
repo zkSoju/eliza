@@ -6,25 +6,25 @@ import {
     State,
 } from "@ai16z/eliza";
 import { generateDirectResponse } from "../../../utils/messageGenerator";
-import { OmniscientProvider } from "../../omniscient/providers/omniscientProvider";
+import { OmniscientProvider } from "../providers/omniscientProvider";
 
-export const teamAlignmentAction: Action = {
-    name: "TEAM_ALIGNMENT",
-    description: "Analyzes team communications and provides alignment insights",
-    similes: ["ALIGN", "COORDINATE", "SYNC"],
+export const strategicInsightAction: Action = {
+    name: "STRATEGIC_INSIGHT",
+    description: "Generates strategic insights from organizational data",
+    similes: ["ANALYZE", "INSIGHT", "STRATEGY"],
     examples: [
         [
             {
                 user: "{{user1}}",
                 content: {
-                    text: "How aligned are our teams?",
-                    action: "TEAM_ALIGNMENT",
+                    text: "What strategic insights can you share?",
+                    action: "STRATEGIC_INSIGHT",
                 },
             },
             {
                 user: "{{agentName}}",
                 content: {
-                    text: "*studies team patterns* Frontend and backend streams flow in parallel...",
+                    text: "*examines the patterns* Three key trends emerge in our project flow...",
                 },
             },
         ],
@@ -50,25 +50,19 @@ export const teamAlignmentAction: Action = {
                 state,
                 callback,
                 {},
-                "No team data available",
+                "No organizational data available",
                 { error: "No data available" }
             );
         }
 
-        // Analyze team alignment
-        const teamProjects = data.teams.map((team) => ({
+        // Analyze project trends
+        const activeProjects = data.projects.filter(
+            (p) => p.state === "active"
+        );
+        const criticalIssues = data.issues.filter((i) => i.priority >= 2);
+        const teamWorkload = data.teams.map((team) => ({
             team: team.name,
-            projects: [
-                ...new Set(
-                    data.issues
-                        .filter((i) => i.team?.id === team.id)
-                        .map((i) => i.project?.name)
-                        .filter(Boolean)
-                ),
-            ],
-            criticalIssues: data.issues.filter(
-                (i) => i.team?.id === team.id && i.priority >= 2
-            ).length,
+            issues: data.issues.filter((i) => i.team?.id === team.id).length,
         }));
 
         return generateDirectResponse(
@@ -76,20 +70,24 @@ export const teamAlignmentAction: Action = {
             state,
             callback,
             {
-                teamProjects,
+                projects: activeProjects,
+                issues: criticalIssues,
+                teamWorkload,
                 timestamp: new Date().toISOString(),
             },
-            `Analyze team alignment and provide insights:
+            `Analyze the current organizational state and provide strategic insights:
 
 Current State:
-{{teamProjects}}
+Active Projects: {{projects.length}}
+Critical Issues: {{issues.length}}
+Team Workload: {{teamWorkload}}
 
 Guidelines:
-- Assess cross-team dependencies
-- Identify collaboration opportunities
-- Highlight resource sharing needs
-- Note communication patterns
-- Suggest alignment improvements`
+- Identify key trends and patterns
+- Highlight potential bottlenecks
+- Suggest strategic priorities
+- Note resource allocation needs
+- Recommend actionable next steps`
         );
     },
 };

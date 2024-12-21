@@ -59,8 +59,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import yargs from "yargs";
 import berachainPlugin from "./plugins/berachain/berachainPlugin";
-import cyberneticPlugin from "./plugins/cybernetic/cyberneticPlugin";
-import omniscientPlugin from "./plugins/omniscient/omniscientPlugin";
+import { cyberneticPlugin } from "./plugins/cybernetic/cyberneticPlugin";
 
 const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
 const __dirname = path.dirname(__filename); // get the name of the directory
@@ -458,11 +457,24 @@ function isFalsish(input: any): boolean {
 }
 
 function getSecret(character: Character, secret: string) {
-    return (
-        character.settings.secrets?.[secret] ||
-        process.env[secret] ||
-        process.env[`${character.name.toUpperCase()}_${secret}`]
-    );
+    // Check if settings exists first
+    if (!character.settings) return undefined;
+
+    // Try character-specific secrets first
+    const characterSecret = character.settings.secrets?.[secret];
+    if (characterSecret) return characterSecret;
+
+    // Try environment variables
+    const envSecret = process.env[secret];
+    if (envSecret) return envSecret;
+
+    // Try character-specific environment variable
+    const characterEnvSecret =
+        process.env[`${character.name.toUpperCase()}_${secret}`];
+    if (characterEnvSecret) return characterEnvSecret;
+
+    // If nothing found, return undefined
+    return undefined;
 }
 
 let nodePlugin: any | undefined;
@@ -509,7 +521,6 @@ export async function createAgent(
         plugins: [
             bootstrapPlugin,
             cyberneticPlugin,
-            getSecret(character, "LINEAR_API_KEY") ? omniscientPlugin : null,
             getSecret(character, "EVM_PRIVATE_KEY") ? berachainPlugin : null,
             getSecret(character, "CONFLUX_CORE_PRIVATE_KEY")
                 ? confluxPlugin

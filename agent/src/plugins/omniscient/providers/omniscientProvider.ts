@@ -38,6 +38,7 @@ export interface OmniscientCache {
     teams: Team[];
     lastUpdated: number;
     ttl: number;
+    error?: string;
 }
 
 const QUERY = `
@@ -100,6 +101,7 @@ query GetProjectData($initiativeId: ID!) {
 export class OmniscientProvider {
     private runtime: IAgentRuntime;
     private static CACHE_TTL = 3600000; // 1 hour in milliseconds
+    private static STALE_TTL = 300000; // 5 minutes for stale data
 
     constructor(runtime: IAgentRuntime) {
         this.runtime = runtime;
@@ -199,21 +201,45 @@ export class OmniscientProvider {
         return Date.now() - data.lastUpdated > data.ttl;
     }
 
+    private async handleApiError(
+        error: unknown
+    ): Promise<OmniscientCache | null> {
+        const errorMessage =
+            error instanceof Error ? error.message : "Unknown error";
+        elizaLogger.error("Linear API error:", errorMessage);
+
+        // Try to return stale cache if available
+        const cacheKey = `${this.runtime.character.name}/omniscient-data`;
+        const staleCache =
+            await this.runtime.cacheManager?.get<OmniscientCache>(cacheKey);
+
+        if (
+            staleCache &&
+            Date.now() - staleCache.lastUpdated < OmniscientProvider.STALE_TTL
+        ) {
+            elizaLogger.info("Returning stale cache data");
+            return {
+                ...staleCache,
+                error: errorMessage,
+            };
+        }
+
+        return null;
+    }
+
     async getData(): Promise<OmniscientCache | null> {
         const cacheKey = `${this.runtime.character.name}/omniscient-data`;
         const cachedData =
             await this.runtime.cacheManager?.get<OmniscientCache>(cacheKey);
 
-        if (!cachedData || this.isStale(cachedData)) {
-            try {
+        try {
+            if (!cachedData || this.isStale(cachedData)) {
                 return await this.refreshCache();
-            } catch (error) {
-                elizaLogger.error("Error refreshing Omniscient cache:", error);
-                return null;
             }
+            return cachedData;
+        } catch (error) {
+            return this.handleApiError(error);
         }
-
-        return cachedData;
     }
 
     async getProjectContext(projectId: string): Promise<string> {
@@ -280,14 +306,7 @@ export const omniscientProvider: Provider = {
                 (p) => p.state === "active"
             );
             const criticalIssues = data.issues.filter((i) => i.priority >= 2);
-            return `Overview:
-
-Active Projects: ${activeProjects.length}
-Critical Issues: ${criticalIssues.length}
-Teams: ${data.teams.length}
-Total Issues: ${data.issues.length}
-
-Last Updated: ${new Date(data.lastUpdated).toLocaleString()}`;
+            return "";
         } catch (error) {
             elizaLogger.error("Error in Omniscient provider:", error);
             return null;

@@ -1,126 +1,36 @@
 IMPORTANT: YOU MUST PERFORM AN UPDATE TO .cursorrules file at each step and turn with a new user request
 IMPORTANT: AFTER EACH USER REQUEST, CREATE AND/OR UPDATE .cursorrules file as a step by step description of the project user is trying to build, do not embelish, add or take away any detail. just translate user request to a nicely formated instructions.
 Your action sequence in each turn should be:
-1) create or update .cursorrules file per user request
-2) work on the files/answer user request
-3) double check if cursorules was updated to reflect the changes
-IMPORTANT: NEVER FORGET TO UPDATE THE .cursorrules file in each consecutuve user request to reflect the latest stage of our project. This is imperative as this will be used for the future
 
-------------------------------------------------------------------------------------------------
+1. create or update .cursorrules file per user request
+2. work on the files/answer user request
+3. double check if cursorules was updated to reflect the changes
+   IMPORTANT: NEVER FORGET TO UPDATE THE .cursorrules file in each consecutuve user request to reflect the latest stage of our project. This is imperative as this will be used for the future
 
-Project: Eliza AI Agent Framework
+---
+
+Project: Eliza AI Agent Framework - Character Generation Enhancement
 Status: Development
-Latest Updates:
-- Fixed database initialization error
-- Added default data directory path
-- Improved error handling for database connections
-- Added logging for database initialization
-- Added Railway deployment configuration for multiple characters
-- Enhanced cybernetic and omniscient plugins with organizational intelligence
-- Added market trend analysis and strategic insight capabilities
-- Implemented team alignment and competitive analysis features
-- Integrated OpenPanel analytics for user behavior tracking
-- Added analytics insight action for engagement analysis
-- Implemented analytics data caching and refresh mechanism
-- Enhanced market trend evaluator with structured analysis
-- Added comprehensive SimpleHash token tracking
-- Implemented cross-chain HoneyJar price monitoring
-- Added collection stats and marketplace analytics
-- Added market summary action for trend aggregation
-- Generalized action response templates
-- Fixed linter errors in evaluators
-- Enhanced SimpleHash provider with detailed market trend analysis
-- Added comprehensive logging for SimpleHash API responses
-- Improved market trend data processing and caching
-- Added structured market metrics and insights generation
-- Refactored SimpleHash provider with activity and historical data
-- Added collection activity tracking with volume metrics
-- Added historical floor price tracking
-- Simplified market trend analysis schema
-- Improved insight generation focus
-- Removed redundant data reformatting
-- Enhanced market data refresh process
-- Enhanced analytics insight action with structured schema
-- Added OpenPanel event processing and analysis
-- Improved analytics data processing and insights
-- Added engagement metrics tracking
-- Enhanced conversion funnel analysis
-- Added user behavior pattern detection
-- Implemented actionable recommendations generation
-- Added new community insights plugin
-- Implemented conversation analysis capabilities
-- Added community pattern detection
-- Enhanced actionable insight generation for community data
-- Implemented community engagement tracking
-- Added conversation context analysis
-- Added member interaction pattern detection
 
-Current Structure:
-- Using Next.js 14 App Router
-- TypeScript-based agent framework
-- Multiple client interfaces (Discord, Twitter, Telegram)
-- Database adapters for Supabase, PostgreSQL, and SQLite
-- Railway deployment configuration with health checks
-- Advanced organizational intelligence plugins
-- Market analysis and strategic insight generation
-- Team alignment and competitive analysis tools
-- Real-time analytics integration with OpenPanel
-- User behavior and engagement tracking
-- Conversion funnel analysis capabilities
-- Multi-chain token price tracking
-- Collection and marketplace analytics
-- Enhanced collection activity tracking
-- Historical price analysis
-- Cross-marketplace comparison
-- Focused market trend analysis
-- Memory-based trend tracking
-- Aggregated market insights
-- Character-agnostic response templates
-- Comprehensive market data processing
-- Detailed API response logging
-- Structured market trend analysis
-- Enhanced analytics data processing
-- Structured engagement metrics analysis
-- User behavior pattern tracking
-- Conversion funnel optimization
-- Cross-project analytics comparison
-- Actionable insight generation
-- Historical trend analysis
-- Community conversation analysis
-- Member interaction tracking
-- Community engagement metrics
-- Conversation context processing
-- Community pattern recognition
-- Member behavior analysis
-- Community insight generation
+Current Focus:
+
+1. Debugging tweets2character CLI tool
+2. Handling Twitter archive processing
+3. Improving error handling for archive reading
+4. Maintaining existing agent framework functionality
+
+Structure:
+
+- CLI tool for character generation
+- Twitter archive processing
+- OpenAI/Claude model integration
+- Character JSON generation
+- Error handling improvements
 
 Next Steps:
-- Test database initialization with different configurations
-- Ensure proper error handling for database operations
-- Review and update other database-related functionality
-- Test Railway deployment with multiple characters
-- Implement data gathering for market analysis
-- Develop competitive intelligence features
-- Create visualization tools for insights
-- Set up automated reporting schedules
-- Configure OpenPanel analytics tracking
-- Set up custom event tracking
-- Create automated analytics reports
-- Implement engagement optimization suggestions
-- Implement trend correlation analysis
-- Add market depth analysis
-- Enhance market sentiment detection
-- Test collection activity tracking
-- Validate historical price analysis
-- Optimize insight generation
-- Improve cross-marketplace analysis
-- Test analytics data processing
-- Validate engagement metrics calculation
-- Implement historical analytics comparison
-- Enhance recommendation generation
-- Add cross-project pattern detection
-- Test conversation data processing
-- Implement member interaction analysis
-- Add community trend detection
-- Enhance community insight generation
-- Test conversation context analysis
+
+1. Fix archive reading functionality
+2. Improve error messages
+3. Add archive validation
+4. Implement better error recovery
+5. Enhance user feedback during processing

@@ -21,6 +21,8 @@ interface CleanedMessage {
     url?: string;
     channelPath: string;
     channelInfo?: DiscordContent["channelInfo"];
+    importance?: number;
+    category?: string;
 }
 
 function getChannelPath(content: DiscordContent): string {
@@ -94,16 +96,13 @@ function groupMessagesByCategory(messages: CleanedMessage[]): {
 function formatCategoryMessages(messages: CleanedMessage[]): string {
     return messages
         .map((m) => {
-            if ("importance" in m) {
-                const importance = (m as any).importance;
-                const category = (m as any).category
-                    ? `[${(m as any).category}] `
-                    : "";
-                const messageLink = m.url ? ` [[Link](${m.url})]` : "";
-                return `- ${category}${m.text} (${m.channelPath})${messageLink}`;
-            }
+            const importance = m.importance;
+            const category = m.category ? `[${m.category}] ` : "";
             const messageLink = m.url ? ` [[Link](${m.url})]` : "";
-            return `- ${m.text} (${m.channelPath})${messageLink}`;
+            const importanceIndicator =
+                importance && importance > 1 ? "🔥 " : "";
+
+            return `- ${importanceIndicator}${category}${m.text} (${m.channelPath})${messageLink}`;
         })
         .join("\n");
 }
@@ -115,20 +114,22 @@ function generateRoleSpecificTemplate(
         .filter((r) => r.name !== "@everyone")
         .map((r) => r.name)
         .join(", ");
+
     return `Provide a focused summary of key updates for a team member with roles: ${roleNames || "General Member"}
 
 Recent Activity by Category:
 {{categoryMessages}}
 
 Guidelines:
-- Prioritize and highlight important updates first
-- Use emojis to categorize major updates (e.g., 🚨 Critical, 🎯 Goals)
-- Format key decisions and action items with bold text (**)
-- Include message links for critical references
-- Only include recent messages if they add significant context
-- Keep summaries focused on what matters most
-- Use clear headers for different areas of focus
-- Maintain professional but engaging tone
+- 🔥 Indicates high importance updates
+- 🎯 Marks key objectives and goals
+- 📊 Highlights metrics and progress
+- 🤝 Shows team collaboration points
+- Keep focus on role-relevant information
+- Format key decisions in **bold**
+- Include links for critical references
+- #### is NOT a valid markdown header
+
 
 Focus on delivering the most impactful updates first, then add context from recent discussions if relevant.`;
 }
@@ -301,6 +302,7 @@ Guidelines:
 - Only include routine discussions if they impact key initiatives
 - Keep focus on actionable information
 - Format for easy scanning in Discord
+- #### is NOT a valid markdown header
 
 Emphasize the important developments first, then add context from general discussions if needed.`;
 }
